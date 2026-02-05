@@ -16,7 +16,7 @@ import edu.wpi.first.units.measure.*;
 
 public class DrivetrainConstants {
     public static final double translationP = 0, translationI = 0, translationD = 0;
-    public static final double headingP = 10, headingI = 0, headingD = 0;
+    public static final double headingP = 8, headingI = 0, headingD = 0;
 
     private static final Slot0Configs steerGains = new Slot0Configs()
         .withKP(100).withKI(0).withKD(0.5)
@@ -53,7 +53,7 @@ public class DrivetrainConstants {
     public static final LinearVelocity speedAt12Volts = MetersPerSecond.of(4.58);
 
     public static final double maxSpeed = speedAt12Volts.in(MetersPerSecond);
-    public static final double maxAngularRate = RotationsPerSecond.of(0.75).in(RadiansPerSecond);
+    public static final double maxAngularSpeed = RotationsPerSecond.of(0.75).in(RadiansPerSecond);
 
     private static final double coupleRatio = 3.5714285714285716;
     private static final double driveGearRatio = 6.746031746031747;

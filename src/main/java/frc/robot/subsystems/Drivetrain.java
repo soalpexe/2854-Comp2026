@@ -42,7 +42,7 @@ public class Drivetrain extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder> imp
 
         focRequest = new SwerveRequest.FieldCentric()
             .withDeadband(DrivetrainConstants.maxSpeed * ControllerConstants.deadband)
-            .withRotationalDeadband(DrivetrainConstants.maxAngularRate * ControllerConstants.deadband);
+            .withRotationalDeadband(DrivetrainConstants.maxAngularSpeed * ControllerConstants.deadband);
 
         rocRequest = new SwerveRequest.RobotCentric();
 
@@ -53,7 +53,7 @@ public class Drivetrain extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder> imp
 
     public double calcAimingPID(double targetHeading) {
         double power = headingPID.calculate(getRotation2d().getRadians(), targetHeading);
-        return MathUtil.clamp(power, -DrivetrainConstants.maxAngularRate, DrivetrainConstants.maxAngularRate);
+        return MathUtil.clamp(power, -DrivetrainConstants.maxAngularSpeed, DrivetrainConstants.maxAngularSpeed);
     }
 
     public Rotation2d getRotation2d() {
@@ -90,10 +90,11 @@ public class Drivetrain extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder> imp
     }
 
     public Command setFOCSpeedsCmd(DoubleSupplier speedX, DoubleSupplier speedY, DoubleSupplier angularSpeed) {
-        return run(() -> focRequest
-            .withVelocityX(speedX.getAsDouble())
-            .withVelocityY(speedY.getAsDouble())
-            .withRotationalRate(isAiming ? calcAimingPID(ShotCalculator.targetHeading) : angularSpeed.getAsDouble())
+        return run(() -> setControl(focRequest
+                .withVelocityX(speedX.getAsDouble())
+                .withVelocityY(speedY.getAsDouble())
+                .withRotationalRate(isAiming ? calcAimingPID(ShotCalculator.targetHeading) : angularSpeed.getAsDouble())
+            )
         );
     }
 

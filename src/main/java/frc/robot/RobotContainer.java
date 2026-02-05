@@ -36,9 +36,9 @@ public class RobotContainer {
     private void configureBindings() {
         drivetrain.setDefaultCommand(
             drivetrain.setFOCSpeedsCmd(
-                () -> controller.getLeftX(),
-                () -> controller.getLeftY(),
-                () -> controller.getRightX()
+                () -> -controller.getLeftY() * DrivetrainConstants.maxSpeed,
+                () -> -controller.getLeftX() * DrivetrainConstants.maxSpeed,
+                () -> -controller.getRightX() * DrivetrainConstants.maxAngularSpeed
             )
         );
         
