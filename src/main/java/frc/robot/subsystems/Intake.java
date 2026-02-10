@@ -19,6 +19,7 @@ public class Intake extends SubsystemBase {
 
     public enum Position {
         Stow(0),
+        Pulse(7.5),
         Deploy(10.5);
 
         public double value;
@@ -64,6 +65,14 @@ public class Intake extends SubsystemBase {
             setPositionCmd(Position.Stow),
             
             () -> atPosition(Position.Stow)
+        );
+    }
+
+    public Command pulseCmd() {
+        return Commands.repeatingSequence(
+            setPositionCmd(Position.Deploy),
+            setPositionCmd(Position.Pulse),
+            Commands.waitSeconds(0.3)
         );
     }
 

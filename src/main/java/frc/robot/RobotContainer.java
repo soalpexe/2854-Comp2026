@@ -35,7 +35,7 @@ public class RobotContainer {
             Constants.Drivetrain.backLeftConfig, Constants.Drivetrain.backRightConfig
         );
 
-        intake = new Intake(0, 0);
+        intake = new Intake(Constants.Intake.pivotMotorID, Constants.Intake.rollerMotorID);
         vision = new Vision();
 
         configureBindings();
@@ -54,8 +54,8 @@ public class RobotContainer {
         controller.x().onTrue(drivetrain.runOnce(() -> drivetrain.seedFieldCentric()));
         
         controller.rightBumper()
-            .onTrue(drivetrain.setIsAimingCmd(true))
-            .onFalse(drivetrain.setIsAimingCmd(false));
+            .onTrue(drivetrain.setIsAimingCmd(true).andThen(intake.pulseCmd()))
+            .onFalse(drivetrain.setIsAimingCmd(false).andThen(intake.setPositionCmd(Intake.Position.Deploy)));
     }
 
     public void periodic() {
