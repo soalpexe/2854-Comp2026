@@ -6,15 +6,14 @@ package frc.robot;
 
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
-import frc.robot.constants.FieldConstants;
 
 public class ShotCalculator {
     public static double targetHeading, targetHoodAngle, targetRPM;
 
     public static void updateState(Pose2d robotPose, ChassisSpeeds speeds) {
         double rawHeading = Math.atan2(
-            FieldConstants.hubPose.getY() - robotPose.getY(),
-            FieldConstants.hubPose.getX() - robotPose.getX()
+            Constants.Field.hubPose.getY() - robotPose.getY(),
+            Constants.Field.hubPose.getX() - robotPose.getX()
         );
 
         targetHeading = rawHeading;

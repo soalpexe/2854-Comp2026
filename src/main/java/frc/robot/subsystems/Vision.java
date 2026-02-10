@@ -7,10 +7,10 @@ package frc.robot.subsystems;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import frc.robot.Constants;
 import frc.robot.LimelightHelpers;
 import frc.robot.Utilities;
 import frc.robot.LimelightHelpers.RawFiducial;
-import frc.robot.constants.VisionConstants;
 
 public class Vision extends SubsystemBase {
     public Vision() {}
@@ -31,8 +31,8 @@ public class Vision extends SubsystemBase {
 
     public Pose2d[] getPoseEstimates() {
         return new Pose2d[] {
-            getPoseEstimate(VisionConstants.leftCamID),
-            getPoseEstimate(VisionConstants.rightCamID)
+            getPoseEstimate(Constants.Vision.leftCamID),
+            getPoseEstimate(Constants.Vision.rightCamID)
         };
     }
 

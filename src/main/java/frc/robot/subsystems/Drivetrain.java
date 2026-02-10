@@ -24,11 +24,9 @@ import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Subsystem;
+import frc.robot.Constants;
 import frc.robot.ShotCalculator;
 import frc.robot.Utilities;
-import frc.robot.constants.ControllerConstants;
-import frc.robot.constants.DrivetrainConstants;
-import frc.robot.constants.FieldConstants;
 
 public class Drivetrain extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder> implements Subsystem {
     private SwerveRequest.FieldCentric focRequest;
@@ -42,13 +40,13 @@ public class Drivetrain extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder> imp
         super(TalonFX::new, TalonFX::new, CANcoder::new, drivetrainConfig, moduleConfigs);
 
         focRequest = new SwerveRequest.FieldCentric()
-            .withDeadband(DrivetrainConstants.maxSpeed * ControllerConstants.deadband)
-            .withRotationalDeadband(DrivetrainConstants.maxAngularSpeed * ControllerConstants.deadband);
+            .withDeadband(Constants.Drivetrain.maxSpeed * Constants.deadband)
+            .withRotationalDeadband(Constants.Drivetrain.maxAngularSpeed * Constants.deadband);
 
         rocRequest = new SwerveRequest.RobotCentric();
 
-        translationPID = new PIDController(DrivetrainConstants.translationP, DrivetrainConstants.translationI, DrivetrainConstants.translationD);
-        headingPID = new PIDController(DrivetrainConstants.headingP, DrivetrainConstants.headingI, DrivetrainConstants.headingD);
+        translationPID = new PIDController(Constants.Drivetrain.translationP, Constants.Drivetrain.translationI, Constants.Drivetrain.translationD);
+        headingPID = new PIDController(Constants.Drivetrain.headingP, Constants.Drivetrain.headingI, Constants.Drivetrain.headingD);
         headingPID.enableContinuousInput(-Math.PI, Math.PI);
 
         setOdometryFrequency(250);
@@ -70,7 +68,7 @@ public class Drivetrain extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder> imp
 
     private double calcAimingPID(double targetHeading) {
         double power = headingPID.calculate(getRotation2d().getRadians(), targetHeading);
-        return MathUtil.clamp(power, -DrivetrainConstants.maxAngularSpeed, DrivetrainConstants.maxAngularSpeed);
+        return MathUtil.clamp(power, -Constants.Drivetrain.maxAngularSpeed, Constants.Drivetrain.maxAngularSpeed);
     }
 
     public Rotation2d getRotation2d() {
@@ -123,7 +121,7 @@ public class Drivetrain extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder> imp
     public void periodic() {
         if (DriverStation.isDisabled()) {
             setOperatorPerspectiveForward(
-                Utilities.getAlliance() == Alliance.Red ? FieldConstants.redPerspective : FieldConstants.bluePerspective
+                Utilities.getAlliance() == Alliance.Red ? Constants.redPerspective : Constants.bluePerspective
             );
         }
     }

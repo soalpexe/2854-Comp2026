@@ -9,9 +9,8 @@ import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.networktables.StructPublisher;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
-import frc.robot.constants.ControllerConstants;
-import frc.robot.constants.DrivetrainConstants;
 import frc.robot.subsystems.Drivetrain;
+import frc.robot.subsystems.Intake;
 import frc.robot.subsystems.Vision;
 
 public class RobotContainer {
@@ -21,20 +20,22 @@ public class RobotContainer {
     private StructPublisher<Pose2d> robotPosePublisher;
 
     public Drivetrain drivetrain;
+    public Intake intake;
     public Vision vision;
 
     public RobotContainer() {
         scheduler = CommandScheduler.getInstance();
-        controller = new CommandXboxController(ControllerConstants.controllerID);
+        controller = new CommandXboxController(Constants.controllerID);
 
         robotPosePublisher = NetworkTableInstance.getDefault().getStructTopic("Robot Pose", Pose2d.struct).publish();
 
         drivetrain = new Drivetrain(
-            DrivetrainConstants.drivetrainConfig,
-            DrivetrainConstants.frontLeftConfig, DrivetrainConstants.frontRightConfig,
-            DrivetrainConstants.backLeftConfig, DrivetrainConstants.backRightConfig
+            Constants.Drivetrain.drivetrainConfig,
+            Constants.Drivetrain.frontLeftConfig, Constants.Drivetrain.frontRightConfig,
+            Constants.Drivetrain.backLeftConfig, Constants.Drivetrain.backRightConfig
         );
 
+        intake = new Intake(0, 0);
         vision = new Vision();
 
         configureBindings();
@@ -43,13 +44,15 @@ public class RobotContainer {
     private void configureBindings() {
         drivetrain.setDefaultCommand(
             drivetrain.setFOCSpeedsCmd(
-                () -> -controller.getLeftY() * DrivetrainConstants.maxSpeed,
-                () -> -controller.getLeftX() * DrivetrainConstants.maxSpeed,
-                () -> -controller.getRightX() * DrivetrainConstants.maxAngularSpeed
+                () -> -controller.getLeftY() * Constants.Drivetrain.maxSpeed,
+                () -> -controller.getLeftX() * Constants.Drivetrain.maxSpeed,
+                () -> -controller.getRightX() * Constants.Drivetrain.maxAngularSpeed
             )
         );
         
+        controller.a().onChange(intake.toggleDeployCmd());
         controller.x().onTrue(drivetrain.runOnce(() -> drivetrain.seedFieldCentric()));
+        
         controller.rightBumper()
             .onTrue(drivetrain.setIsAimingCmd(true))
             .onFalse(drivetrain.setIsAimingCmd(false));
