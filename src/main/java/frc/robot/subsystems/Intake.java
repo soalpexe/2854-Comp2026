@@ -5,9 +5,11 @@
 package frc.robot.subsystems;
 
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
+import com.ctre.phoenix6.controls.DutyCycleOut;
 import com.ctre.phoenix6.controls.MotionMagicExpoVoltage;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.InvertedValue;
+import com.ctre.phoenix6.signals.NeutralModeValue;
 
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -18,9 +20,9 @@ public class Intake extends SubsystemBase {
     private TalonFX pivotMotor, rollerMotor;
 
     public enum Position {
-        Stow(0),
-        Pulse(7.5),
-        Deploy(10.5);
+        Stow(0.5),
+        Pulse(6.5),
+        Deploy(9);
 
         public double value;
 
@@ -35,6 +37,7 @@ public class Intake extends SubsystemBase {
 
         TalonFXConfiguration pivotMotorConfig = new TalonFXConfiguration();
         pivotMotorConfig.MotorOutput.Inverted = InvertedValue.Clockwise_Positive;
+        pivotMotorConfig.MotorOutput.NeutralMode = NeutralModeValue.Brake;
 
         pivotMotorConfig.Slot0.kP = 10;
         pivotMotorConfig.MotionMagic.MotionMagicCruiseVelocity = 40;
@@ -59,6 +62,13 @@ public class Intake extends SubsystemBase {
         .until(() -> atPosition(position));
     }
 
+    public Command setRollerOutCmd(double percent) {
+        return Commands.runOnce(
+            () -> rollerMotor.setControl(new DutyCycleOut(percent)),
+            this
+        );
+    }
+
     public Command toggleDeployCmd() {
         return Commands.either(
             setPositionCmd(Position.Deploy),
@@ -69,11 +79,25 @@ public class Intake extends SubsystemBase {
     }
 
     public Command pulseCmd() {
-        return Commands.repeatingSequence(
-            setPositionCmd(Position.Deploy),
-            setPositionCmd(Position.Pulse),
-            Commands.waitSeconds(0.3)
+        return Commands.sequence(
+            setRollerOutCmd(-1),
+            Commands.repeatingSequence(
+                setPositionCmd(Position.Deploy),
+                setPositionCmd(Position.Pulse),
+                Commands.waitSeconds(0.3)
+            )
         );
+    }
+    
+    public Command startCmd() {
+        return Commands.sequence(
+            setPositionCmd(Position.Deploy),
+            setRollerOutCmd(-1)
+        );
+    }
+
+    public Command stopCmd() {
+        return setRollerOutCmd(0);
     }
 
     @Override

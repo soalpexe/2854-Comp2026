@@ -7,7 +7,9 @@ package frc.robot;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.networktables.StructPublisher;
+import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
+import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import frc.robot.subsystems.Drivetrain;
 import frc.robot.subsystems.Intake;
@@ -53,9 +55,13 @@ public class RobotContainer {
         controller.a().onChange(intake.toggleDeployCmd());
         controller.x().onTrue(drivetrain.runOnce(() -> drivetrain.seedFieldCentric()));
         
+        controller.leftBumper()
+            .onTrue(intake.startCmd())
+            .onFalse(intake.stopCmd());
+
         controller.rightBumper()
-            .onTrue(drivetrain.setIsAimingCmd(true).andThen(intake.pulseCmd()))
-            .onFalse(drivetrain.setIsAimingCmd(false).andThen(intake.setPositionCmd(Intake.Position.Deploy)));
+            .onTrue(startOuttakeCmd())
+            .onFalse(stopOuttakeCmd());
     }
 
     public void periodic() {
@@ -63,5 +69,20 @@ public class RobotContainer {
         ShotCalculator.updateState(drivetrain.getPose2d(), drivetrain.getSpeeds());
 
         robotPosePublisher.set(drivetrain.getPose2d());
+    }
+
+    public Command startOuttakeCmd() {
+        return Commands.sequence(
+            drivetrain.setIsAimingCmd(true),
+            intake.pulseCmd()
+        );
+    }
+    
+    public Command stopOuttakeCmd() {
+        return Commands.sequence(
+            drivetrain.setIsAimingCmd(false),
+            intake.setPositionCmd(Intake.Position.Deploy),
+            intake.stopCmd()
+        );
     }
 }

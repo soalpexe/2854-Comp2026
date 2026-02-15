@@ -178,7 +178,7 @@ public class Constants {
     }
 
     public class Intake {
-        public static final int pivotMotorID = 9, rollerMotorID = 0;
+        public static final int pivotMotorID = 9, rollerMotorID = 10;
     }
 
     public class Vision {
