@@ -4,13 +4,21 @@
 
 package frc.robot;
 
-import edu.wpi.first.wpilibj.TimedRobot;
+import org.littletonrobotics.junction.LoggedRobot;
+import org.littletonrobotics.junction.Logger;
+import org.littletonrobotics.junction.networktables.NT4Publisher;
+
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 
-public class Robot extends TimedRobot {
+public class Robot extends LoggedRobot {
     private RobotContainer container;
 
     public Robot() {
+        Logger.recordMetadata("ProjectName", "2854-Comp2026");
+
+        Logger.addDataReceiver(new NT4Publisher());
+        Logger.start();
+
         container = new RobotContainer();
     }
 

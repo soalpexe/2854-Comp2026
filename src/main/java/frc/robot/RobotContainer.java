@@ -4,11 +4,9 @@
 
 package frc.robot;
 
-import edu.wpi.first.math.geometry.Pose2d;
-import edu.wpi.first.networktables.NetworkTableInstance;
-import edu.wpi.first.networktables.StructPublisher;
+import org.littletonrobotics.junction.Logger;
+
 import edu.wpi.first.wpilibj2.command.Command;
-import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import frc.robot.subsystems.Drivetrain;
@@ -16,20 +14,14 @@ import frc.robot.subsystems.Intake;
 import frc.robot.subsystems.Vision;
 
 public class RobotContainer {
-    private CommandScheduler scheduler;
     private CommandXboxController controller;
-
-    private StructPublisher<Pose2d> robotPosePublisher;
 
     public Drivetrain drivetrain;
     public Intake intake;
     public Vision vision;
 
     public RobotContainer() {
-        scheduler = CommandScheduler.getInstance();
         controller = new CommandXboxController(Constants.controllerID);
-
-        robotPosePublisher = NetworkTableInstance.getDefault().getStructTopic("Robot Pose", Pose2d.struct).publish();
 
         drivetrain = new Drivetrain(
             Constants.Drivetrain.drivetrainConfig,
@@ -66,9 +58,9 @@ public class RobotContainer {
 
     public void periodic() {
         drivetrain.addVisionMeasurements(vision.getPoseEstimates());
-        ShotCalculator.updateState(drivetrain.getPose2d(), drivetrain.getSpeeds());
+        ShotCalculator.updateState(drivetrain.getEstimatedPose(), drivetrain.getSpeeds());
 
-        robotPosePublisher.set(drivetrain.getPose2d());
+        Logger.recordOutput("Estimated Robot Pose", drivetrain.getEstimatedPose());
     }
 
     public Command startOuttakeCmd() {

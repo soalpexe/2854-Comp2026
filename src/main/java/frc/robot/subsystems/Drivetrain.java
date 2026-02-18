@@ -68,16 +68,17 @@ public class Drivetrain extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder> imp
     }
 
     private double calcAimingPID(double targetHeading) {
-        double power = headingPID.calculate(getRotation2d().getRadians(), targetHeading);
+        double power = headingPID.calculate(getHeading().getRadians(), targetHeading);
         return MathUtil.clamp(power, -Constants.Drivetrain.maxAngularSpeed, Constants.Drivetrain.maxAngularSpeed);
     }
+    
 
-    public Rotation2d getRotation2d() {
-        return getState().RawHeading;
+    public Pose2d getEstimatedPose() {
+        return getState().Pose;
     }
 
-    public Pose2d getPose2d() {
-        return getState().Pose;
+    public Rotation2d getHeading() {
+        return getState().RawHeading;
     }
 
     public ChassisSpeeds getSpeeds() {
@@ -86,7 +87,7 @@ public class Drivetrain extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder> imp
 
     public void addVisionMeasurement(Pose2d rawEstimate) {
         if (Utilities.isValidPose(rawEstimate)) {
-            Pose2d estimate = new Pose2d(rawEstimate.getTranslation(), getRotation2d());
+            Pose2d estimate = new Pose2d(rawEstimate.getTranslation(), getHeading());
             addVisionMeasurement(estimate, Utils.getCurrentTimeSeconds());
         }
     }
