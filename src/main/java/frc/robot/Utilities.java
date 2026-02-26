@@ -4,13 +4,16 @@
 
 package frc.robot;
 
+import java.util.Optional;
+
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 
 public class Utilities {
     public static Alliance getAlliance() {
-        return DriverStation.getAlliance().get();
+        Optional<Alliance> alliance = DriverStation.getAlliance();
+        return alliance.isPresent() ? alliance.get() : Alliance.Red;
     }
 
     public static boolean isValidPose(Pose2d pose) {

@@ -11,26 +11,36 @@ import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import frc.robot.subsystems.Drivetrain;
 import frc.robot.subsystems.Intake;
+import frc.robot.subsystems.Shooter;
+import frc.robot.subsystems.Spindexer;
+import frc.robot.subsystems.Transfer;
 import frc.robot.subsystems.Vision;
 
 public class RobotContainer {
     private CommandXboxController controller;
 
     public Drivetrain drivetrain;
-    public Intake intake;
     public Vision vision;
+
+    public Shooter shooter;
+    public Transfer transfer;
+    public Spindexer spindexer;
+    public Intake intake;
 
     public RobotContainer() {
         controller = new CommandXboxController(Constants.controllerID);
 
         drivetrain = new Drivetrain(
             Constants.Drivetrain.drivetrainConfig,
-            Constants.Drivetrain.frontLeftConfig, Constants.Drivetrain.frontRightConfig,
-            Constants.Drivetrain.backLeftConfig, Constants.Drivetrain.backRightConfig
+            Constants.Drivetrain.odomFrequency,
+            Constants.Drivetrain.frontLeftConfig, Constants.Drivetrain.frontRightConfig, Constants.Drivetrain.backLeftConfig, Constants.Drivetrain.backRightConfig
         );
-
-        intake = new Intake(Constants.Intake.pivotMotorID, Constants.Intake.rollerMotorID);
         vision = new Vision();
+
+        shooter = new Shooter(Constants.Shooter.leftMotorID, Constants.Shooter.rightMotorID);
+        transfer = new Transfer(Constants.Transfer.motorID);
+        spindexer = new Spindexer(Constants.Spindexer.motorID);
+        intake = new Intake(Constants.Intake.pivotMotorID, Constants.Intake.rollerMotorID);
 
         configureBindings();
     }
@@ -47,10 +57,7 @@ public class RobotContainer {
         controller.a().onChange(intake.toggleDeployCmd());
         controller.x().onTrue(drivetrain.runOnce(() -> drivetrain.seedFieldCentric()));
         
-        controller.leftBumper()
-            .onTrue(intake.startCmd())
-            .onFalse(intake.stopCmd());
-
+        controller.leftBumper().whileTrue(intake.startCmd());
         controller.rightBumper()
             .onTrue(startOuttakeCmd())
             .onFalse(stopOuttakeCmd());
@@ -64,17 +71,28 @@ public class RobotContainer {
     }
 
     public Command startOuttakeCmd() {
-        return Commands.sequence(
+        return Commands.parallel(
             drivetrain.setIsAimingCmd(true),
-            intake.pulseCmd()
+            intake.pulseCmd(),
+            Commands.sequence(
+                shooter.setPercentCmd(0.3),
+                Commands.waitSeconds(0.3),
+                transfer.setPercentCmd(-1),
+                spindexer.setPercentCmd(-0.8)
+            )
         );
     }
     
     public Command stopOuttakeCmd() {
-        return Commands.sequence(
+        return Commands.parallel(
             drivetrain.setIsAimingCmd(false),
             intake.setPositionCmd(Intake.Position.Deploy),
-            intake.stopCmd()
+            Commands.sequence(
+                spindexer.setPercentCmd(0),
+                Commands.waitSeconds(0.3),
+                transfer.setPercentCmd(0),
+                shooter.setPercentCmd(0)
+            )
         );
     }
 }

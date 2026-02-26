@@ -6,7 +6,6 @@ package frc.robot.subsystems;
 
 import java.util.function.DoubleSupplier;
 
-import com.ctre.phoenix6.StatusSignalCollection;
 import com.ctre.phoenix6.Utils;
 import com.ctre.phoenix6.hardware.CANcoder;
 import com.ctre.phoenix6.hardware.TalonFX;
@@ -37,8 +36,8 @@ public class Drivetrain extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder> imp
 
     private boolean isAiming;
 
-    public Drivetrain(SwerveDrivetrainConstants drivetrainConfig, SwerveModuleConstants<?, ?, ?>... moduleConfigs) {
-        super(TalonFX::new, TalonFX::new, CANcoder::new, drivetrainConfig, moduleConfigs);
+    public Drivetrain(SwerveDrivetrainConstants drivetrainConfig, double odomFrequency, SwerveModuleConstants<?, ?, ?>... moduleConfigs) {
+        super(TalonFX::new, TalonFX::new, CANcoder::new, drivetrainConfig, odomFrequency, moduleConfigs);
 
         focRequest = new SwerveRequest.FieldCentric()
             .withDeadband(Constants.Drivetrain.maxSpeed * Constants.deadband)
@@ -49,22 +48,6 @@ public class Drivetrain extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder> imp
         translationPID = new PIDController(Constants.Drivetrain.translationP, Constants.Drivetrain.translationI, Constants.Drivetrain.translationD);
         headingPID = new PIDController(Constants.Drivetrain.headingP, Constants.Drivetrain.headingI, Constants.Drivetrain.headingD);
         headingPID.enableContinuousInput(-Math.PI, Math.PI);
-
-        setOdometryFrequency(250);
-    }
-
-    private void setOdometryFrequency(double frequency) {
-        StatusSignalCollection signals = new StatusSignalCollection();
-
-        for (var module : getModules()) {
-            signals.addSignals(
-                module.getDriveMotor().getPosition(),
-                module.getEncoder().getAbsolutePosition()
-            );
-        }
-
-        signals.addSignals(getPigeon2().getYaw());
-        signals.setUpdateFrequencyForAll(frequency);
     }
 
     private double calcAimingPID(double targetHeading) {
@@ -85,24 +68,20 @@ public class Drivetrain extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder> imp
         return getState().Speeds;
     }
 
-    public void addVisionMeasurement(Pose2d rawEstimate) {
-        if (Utilities.isValidPose(rawEstimate)) {
-            Pose2d estimate = new Pose2d(rawEstimate.getTranslation(), getHeading());
-            addVisionMeasurement(estimate, Utils.getCurrentTimeSeconds());
-        }
-    }
-
-    public void addVisionMeasurements(Pose2d[] estimates) {
-        for (Pose2d estimate : estimates) {
-            addVisionMeasurement(estimate);
+    public void addVisionMeasurements(Pose2d... rawEstimates) {
+        for (Pose2d rawEstimate : rawEstimates) {
+            if (Utilities.isValidPose(rawEstimate)) {
+                Pose2d estimate = new Pose2d(rawEstimate.getTranslation(), getHeading());
+                addVisionMeasurement(estimate, Utils.getCurrentTimeSeconds());
+            }
         }
     }
 
     public void setROCSpeeds(ChassisSpeeds speeds) {
         setControl(rocRequest
             .withVelocityX(speeds.vxMetersPerSecond)
-            .withVelocityY(speeds.vxMetersPerSecond)
-            .withRotationalRate(isAiming ? calcAimingPID(ShotCalculator.targetHeading) : speeds.vxMetersPerSecond)
+            .withVelocityY(speeds.vyMetersPerSecond)
+            .withRotationalRate(isAiming ? calcAimingPID(ShotCalculator.targetHeading) : speeds.omegaRadiansPerSecond)
         );
     }
 

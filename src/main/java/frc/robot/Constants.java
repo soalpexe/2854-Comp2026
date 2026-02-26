@@ -22,13 +22,15 @@ public class Constants {
 
     public static final Rotation2d redPerspective = Rotation2d.kZero, bluePerspective = Rotation2d.k180deg;
 
-    public class Field {
+    public static class Field {
         public static final Pose2d hubPose = new Pose2d(4.625, 4.03, new Rotation2d());
     }
 
-    public class Drivetrain {
+    public static class Drivetrain {
         public static final double translationP = 0, translationI = 0, translationD = 0;
         public static final double headingP = 8, headingI = 0, headingD = 0;
+
+        public static final double odomFrequency = 250;
 
         private static final Slot0Configs steerGains = new Slot0Configs()
             .withKP(100).withKI(0).withKD(0.5)
@@ -177,11 +179,25 @@ public class Constants {
             );
     }
 
-    public class Intake {
-        public static final int pivotMotorID = 9, rollerMotorID = 10;
+    public static class Vision {
+        public static final String leftCamID = "limelight-left";
     }
 
-    public class Vision {
-        public static final String leftCamID = "limelight-left", rightCamID = "limelight-right";
+    public static class Shooter {
+        public static final int leftMotorID = 12, rightMotorID = 13;
+    }
+
+    public static class Transfer {
+        public static final int motorID = 14;
+    }
+    
+    public static class Spindexer {
+        public static final int motorID = 11;
+    }
+
+    public static class Intake {
+        public static final int pivotMotorID = 9, rollerMotorID = 10;
+
+        public static final double tolerance = 0.2;
     }
 }
