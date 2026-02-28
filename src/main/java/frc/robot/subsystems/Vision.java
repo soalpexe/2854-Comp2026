@@ -31,7 +31,7 @@ public class Vision extends SubsystemBase {
 
     public Pose2d[] getPoseEstimates() {
         return new Pose2d[] {
-            getPoseEstimate(Constants.Vision.leftCamID)
+            getPoseEstimate(Constants.Vision.rightCamID)
         };
     }
 

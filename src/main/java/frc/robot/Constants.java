@@ -180,7 +180,7 @@ public class Constants {
     }
 
     public static class Vision {
-        public static final String leftCamID = "limelight-left";
+        public static final String rightCamID = "limelight-right";
     }
 
     public static class Shooter {

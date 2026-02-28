@@ -9,6 +9,7 @@ import com.ctre.phoenix6.controls.MotionMagicVoltage;
 import com.ctre.phoenix6.controls.VoltageOut;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.InvertedValue;
+import com.ctre.phoenix6.signals.NeutralModeValue;
 
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -20,8 +21,8 @@ public class Intake extends SubsystemBase {
     private TalonFX pivotMotor, rollerMotor;
 
     public enum Position {
-        Stow(0.5),
-        Deploy(10);
+        STOW(0.5),
+        DEPLOY(10);
 
         public final double value;
 
@@ -36,6 +37,7 @@ public class Intake extends SubsystemBase {
 
         TalonFXConfiguration pivotMotorConfig = new TalonFXConfiguration();
         pivotMotorConfig.MotorOutput.Inverted = InvertedValue.Clockwise_Positive;
+        pivotMotorConfig.MotorOutput.NeutralMode = NeutralModeValue.Brake;
 
         pivotMotorConfig.Slot0.kP = 10;
         pivotMotorConfig.MotionMagic.MotionMagicCruiseVelocity = 40;
@@ -53,8 +55,8 @@ public class Intake extends SubsystemBase {
         return pivotMotor.getPosition().getValueAsDouble();
     }
 
-    public double getVoltage() {
-        return pivotMotor.getMotorVoltage().getValueAsDouble();
+    public double getTorqueCurrent() {
+        return pivotMotor.getTorqueCurrent().getValueAsDouble();
     }
 
     public boolean atPosition(Position position) {
@@ -66,39 +68,13 @@ public class Intake extends SubsystemBase {
             () -> pivotMotor.setControl(new MotionMagicVoltage(position.value)),
             this
         )
-        .until(() -> atPosition(position) || getVoltage() > 20);
+        .until(() -> atPosition(position) || Math.abs(getTorqueCurrent()) > 118);
     }
 
     public Command setPercentCmd(double percent) {
-        return Commands.startEnd(
+        return Commands.runOnce(
             () -> rollerMotor.setControl(new VoltageOut(percent * 12)),
-            () -> rollerMotor.setControl(new VoltageOut(0)),
             this
-        );
-    }
-
-    public Command toggleDeployCmd() {
-        return Commands.either(
-            setPositionCmd(Position.Deploy),
-            setPositionCmd(Position.Stow),
-            
-            () -> atPosition(Position.Stow)
-        );
-    }
-
-    public Command pulseCmd() {
-        return Commands.repeatingSequence(
-            setPercentCmd(-1),
-            setPositionCmd(Position.Deploy),
-            setPositionCmd(Position.Stow),
-            Commands.waitSeconds(0.3)
-        );
-    }
-    
-    public Command startCmd() {
-        return Commands.parallel(
-            setPositionCmd(Position.Deploy),
-            setPercentCmd(-1)
         );
     }
 

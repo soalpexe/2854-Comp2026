@@ -5,10 +5,8 @@
 package frc.robot.subsystems;
 
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
-import com.ctre.phoenix6.controls.Follower;
 import com.ctre.phoenix6.controls.VoltageOut;
 import com.ctre.phoenix6.hardware.TalonFX;
-import com.ctre.phoenix6.signals.MotorAlignmentValue;
 
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
@@ -31,18 +29,14 @@ public class Shooter extends SubsystemBase {
 
         leftMotor.getConfigurator().apply(leftMotorConfig);
         rightMotor.getConfigurator().apply(rightMotorConfig);
-
-        rightMotor.setControl(new Follower(leftMotorID, MotorAlignmentValue.Opposed));
-    }
-    
-    public double getVoltage() {
-        return leftMotor.getMotorVoltage().getValueAsDouble();
     }
 
     public Command setPercentCmd(double percent) {
-        return Commands.startEnd(
-            () -> leftMotor.setControl(new VoltageOut(percent * 12)),
-            () -> leftMotor.setControl(new VoltageOut(0)),
+        return Commands.runOnce(
+            () -> {
+                leftMotor.setControl(new VoltageOut(percent * 12));
+                rightMotor.setControl(new VoltageOut(-percent * 12));
+            },
             this
         );
     }

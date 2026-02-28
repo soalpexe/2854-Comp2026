@@ -6,9 +6,9 @@ package frc.robot;
 
 import org.littletonrobotics.junction.Logger;
 
-import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
+import frc.robot.StateMachine.State;
 import frc.robot.subsystems.Drivetrain;
 import frc.robot.subsystems.Intake;
 import frc.robot.subsystems.Shooter;
@@ -17,17 +17,19 @@ import frc.robot.subsystems.Transfer;
 import frc.robot.subsystems.Vision;
 
 public class RobotContainer {
+    private StateMachine fsm;
     private CommandXboxController controller;
 
-    public Drivetrain drivetrain;
-    public Vision vision;
+    private Drivetrain drivetrain;
+    private Vision vision;
 
-    public Shooter shooter;
-    public Transfer transfer;
-    public Spindexer spindexer;
-    public Intake intake;
+    private Shooter shooter;
+    private Transfer transfer;
+    private Spindexer spindexer;
+    private Intake intake;
 
     public RobotContainer() {
+        fsm = new StateMachine();
         controller = new CommandXboxController(Constants.controllerID);
 
         drivetrain = new Drivetrain(
@@ -42,7 +44,51 @@ public class RobotContainer {
         spindexer = new Spindexer(Constants.Spindexer.motorID);
         intake = new Intake(Constants.Intake.pivotMotorID, Constants.Intake.rollerMotorID);
 
+        configureFSMTriggers();
         configureBindings();
+    }
+
+    private void configureFSMTriggers() {
+        fsm.getStateTrigger(State.INTAKE)
+            .onTrue(
+                Commands.sequence(
+                    intake.setPositionCmd(Intake.Position.DEPLOY),
+                    intake.setPercentCmd(1)
+                )
+            )
+            .onFalse(intake.setPercentCmd(0));
+
+        fsm.getStateTrigger(State.OUTTAKE)
+            .onTrue(
+                Commands.parallel(
+                    drivetrain.setAimingCmd(true),
+                    Commands.repeatingSequence(
+                        intake.setPercentCmd(1),
+                        intake.setPositionCmd(Intake.Position.DEPLOY),
+                        intake.setPositionCmd(Intake.Position.STOW),
+                        Commands.waitSeconds(0.3)
+                    ),
+
+                    Commands.sequence(
+                        shooter.setPercentCmd(0.5),
+                        Commands.waitSeconds(0.3),
+                        transfer.setPercentCmd(-1),
+                        spindexer.setPercentCmd(-1)
+                    )
+                )
+            )
+            .onFalse(
+                Commands.sequence(
+                    drivetrain.setAimingCmd(false),
+                    intake.setPositionCmd(Intake.Position.DEPLOY),
+                    intake.setPercentCmd(0),
+
+                    spindexer.setPercentCmd(0),
+                    Commands.waitSeconds(0.3),
+                    transfer.setPercentCmd(0),
+                    shooter.setPercentCmd(0.3)
+                )
+            );
     }
 
     private void configureBindings() {
@@ -53,14 +99,14 @@ public class RobotContainer {
                 () -> -controller.getRightX() * Constants.Drivetrain.maxAngularSpeed
             )
         );
-        
-        controller.a().onChange(intake.toggleDeployCmd());
-        controller.x().onTrue(drivetrain.runOnce(() -> drivetrain.seedFieldCentric()));
-        
-        controller.leftBumper().whileTrue(intake.startCmd());
+
+        controller.leftBumper()
+            .onTrue(fsm.setStateCmd(State.INTAKE))
+            .onFalse(fsm.setStateCmd(State.IDLE));
+            
         controller.rightBumper()
-            .onTrue(startOuttakeCmd())
-            .onFalse(stopOuttakeCmd());
+            .onTrue(fsm.setStateCmd(State.OUTTAKE))
+            .onFalse(fsm.setStateCmd(State.IDLE));
     }
 
     public void periodic() {
@@ -68,31 +114,7 @@ public class RobotContainer {
         ShotCalculator.updateState(drivetrain.getEstimatedPose(), drivetrain.getSpeeds());
 
         Logger.recordOutput("Estimated Robot Pose", drivetrain.getEstimatedPose());
-    }
-
-    public Command startOuttakeCmd() {
-        return Commands.parallel(
-            drivetrain.setIsAimingCmd(true),
-            intake.pulseCmd(),
-            Commands.sequence(
-                shooter.setPercentCmd(0.3),
-                Commands.waitSeconds(0.3),
-                transfer.setPercentCmd(-1),
-                spindexer.setPercentCmd(-0.8)
-            )
-        );
-    }
-    
-    public Command stopOuttakeCmd() {
-        return Commands.parallel(
-            drivetrain.setIsAimingCmd(false),
-            intake.setPositionCmd(Intake.Position.Deploy),
-            Commands.sequence(
-                spindexer.setPercentCmd(0),
-                Commands.waitSeconds(0.3),
-                transfer.setPercentCmd(0),
-                shooter.setPercentCmd(0)
-            )
-        );
+        Logger.recordOutput("Last Robot State", fsm.lastState.toString());
+        Logger.recordOutput("Current Robot State", fsm.currentState.toString());
     }
 }

@@ -34,7 +34,7 @@ public class Drivetrain extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder> imp
 
     private PIDController translationPID, headingPID;
 
-    private boolean isAiming;
+    public boolean isAiming;
 
     public Drivetrain(SwerveDrivetrainConstants drivetrainConfig, double odomFrequency, SwerveModuleConstants<?, ?, ?>... moduleConfigs) {
         super(TalonFX::new, TalonFX::new, CANcoder::new, drivetrainConfig, odomFrequency, moduleConfigs);
@@ -94,7 +94,7 @@ public class Drivetrain extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder> imp
         );
     }
 
-    public Command setIsAimingCmd(boolean value) {
+    public Command setAimingCmd(boolean value) {
         return Commands.runOnce(() -> isAiming = value);
     }
 
