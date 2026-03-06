@@ -34,7 +34,7 @@ public class Drivetrain extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder> imp
 
     private PIDController translationPID, headingPID;
 
-    public boolean isAiming;
+    private boolean isSlowed, isAiming;
 
     public Drivetrain(SwerveDrivetrainConstants drivetrainConfig, double odomFrequency, SwerveModuleConstants<?, ?, ?>... moduleConfigs) {
         super(TalonFX::new, TalonFX::new, CANcoder::new, drivetrainConfig, odomFrequency, moduleConfigs);
@@ -48,6 +48,9 @@ public class Drivetrain extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder> imp
         translationPID = new PIDController(Constants.Drivetrain.translationP, Constants.Drivetrain.translationI, Constants.Drivetrain.translationD);
         headingPID = new PIDController(Constants.Drivetrain.headingP, Constants.Drivetrain.headingI, Constants.Drivetrain.headingD);
         headingPID.enableContinuousInput(-Math.PI, Math.PI);
+
+        isSlowed = false;
+        isAiming = false;
     }
 
     private double calcAimingPID(double targetHeading) {
@@ -78,20 +81,29 @@ public class Drivetrain extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder> imp
     }
 
     public void setROCSpeeds(ChassisSpeeds speeds) {
+        double percent = isSlowed ? 0.2 : 1;
+
         setControl(rocRequest
-            .withVelocityX(speeds.vxMetersPerSecond)
-            .withVelocityY(speeds.vyMetersPerSecond)
-            .withRotationalRate(isAiming ? calcAimingPID(ShotCalculator.targetHeading) : speeds.omegaRadiansPerSecond)
+            .withVelocityX(speeds.vxMetersPerSecond * percent)
+            .withVelocityY(speeds.vyMetersPerSecond * percent)
+            .withRotationalRate(isAiming ? calcAimingPID(ShotCalculator.getTargetHeading()) : speeds.omegaRadiansPerSecond * percent)
         );
     }
 
-    public Command setFOCSpeedsCmd(DoubleSupplier speedX, DoubleSupplier speedY, DoubleSupplier angularSpeed) {
-        return run(() -> setControl(focRequest
-                .withVelocityX(speedX.getAsDouble())
-                .withVelocityY(speedY.getAsDouble())
-                .withRotationalRate(isAiming ? calcAimingPID(ShotCalculator.targetHeading) : angularSpeed.getAsDouble())
-            )
-        );
+    public Command setFOCSpeedsCmd(DoubleSupplier vxSupplier, DoubleSupplier vySupplier, DoubleSupplier omegaSupplier) {
+        return run(() -> {
+            double percent = isSlowed ? 0.2 : 1;
+
+            setControl(focRequest
+                .withVelocityX(vxSupplier.getAsDouble() * percent)
+                .withVelocityY(vySupplier.getAsDouble() * percent)
+                .withRotationalRate(isAiming ? calcAimingPID(ShotCalculator.getTargetHeading()) : omegaSupplier.getAsDouble() * percent)
+            );
+        });
+    }
+
+    public Command setSlowedCmd(boolean value) {
+        return Commands.runOnce(() -> isSlowed = value);
     }
 
     public Command setAimingCmd(boolean value) {

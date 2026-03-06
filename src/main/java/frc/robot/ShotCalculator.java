@@ -4,20 +4,52 @@
 
 package frc.robot;
 
+import java.util.function.Supplier;
+
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
+import edu.wpi.first.wpilibj.Notifier;
+import edu.wpi.first.wpilibj.DriverStation.Alliance;
 
 public class ShotCalculator {
-    public static double targetHeading, targetHoodAngle, targetRPM;
+    private static Notifier notifier;
 
-    public static void updateState(Pose2d robotPose, ChassisSpeeds speeds) {
+    private static Supplier<Pose2d> poseSupplier;
+    private static Supplier<ChassisSpeeds> speedsSupplier;
+
+    private static volatile double targetHeading, targetHoodAngle, targetRPM;
+
+    private static void updateState() {
+        Pose2d robotPose = poseSupplier.get();
+        Pose2d hubPose = Utilities.getAlliance() == Alliance.Red ? Constants.Field.redHubPose : Constants.Field.blueHubPose;
+
         double rawHeading = Math.atan2(
-            Constants.Field.hubPose.getY() - robotPose.getY(),
-            Constants.Field.hubPose.getX() - robotPose.getX()
+            hubPose.getY() - robotPose.getY(),
+            hubPose.getX() - robotPose.getX()
         );
 
         targetHeading = rawHeading;
         targetHoodAngle = 0;
         targetRPM = 0;
+    }
+
+    public static double getTargetHeading() {
+        return targetHeading;
+    }
+
+    public static double getTargetHoodAngle() {
+        return targetHoodAngle;
+    }
+
+    public static double getTargetRPM() {
+        return targetRPM;
+    }
+
+    public static void configure(Supplier<Pose2d> poseSupplier, Supplier<ChassisSpeeds> speedsSupplier) {
+        notifier = new Notifier(ShotCalculator::updateState);
+        notifier.startPeriodic(1 / Constants.Drivetrain.odomFrequency);
+        
+        ShotCalculator.poseSupplier = poseSupplier;
+        ShotCalculator.speedsSupplier = speedsSupplier;
     }
 }

@@ -23,7 +23,8 @@ public class Constants {
     public static final Rotation2d redPerspective = Rotation2d.kZero, bluePerspective = Rotation2d.k180deg;
 
     public static class Field {
-        public static final Pose2d hubPose = new Pose2d(4.625, 4.03, new Rotation2d());
+        public static final Pose2d redHubPose = new Pose2d(11.915, 4.03, new Rotation2d());
+        public static final Pose2d blueHubPose = new Pose2d(4.625, 4.03, new Rotation2d());
     }
 
     public static class Drivetrain {
@@ -197,7 +198,11 @@ public class Constants {
 
     public static class Intake {
         public static final int pivotMotorID = 9, rollerMotorID = 10;
-
+        public static final double tolerance = 0.2;
+    }
+    
+    public static class Climber {
+        public static final int motorID = 15;
         public static final double tolerance = 0.2;
     }
 }

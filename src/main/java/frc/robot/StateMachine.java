@@ -7,7 +7,6 @@ package frc.robot;
 import java.util.HashMap;
 
 import edu.wpi.first.wpilibj2.command.Command;
-import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 
@@ -15,10 +14,11 @@ public class StateMachine {
     private HashMap<State, Trigger> stateTriggers;
     private HashMap<Transition, Trigger> transitionTriggers;
 
-    public State lastState, currentState;
+    private State lastState, currentState;
 
     public enum State {
         IDLE,
+        STOW,
         INTAKE,
         OUTTAKE
     }
@@ -58,6 +58,14 @@ public class StateMachine {
         }
     }
 
+    public State getLastState() {
+        return lastState;
+    }
+    
+    public State getCurrentState() {
+        return currentState;
+    }
+
     public Trigger getStateTrigger(State state) {
         return stateTriggers.get(state);
     }
@@ -77,8 +85,6 @@ public class StateMachine {
         return Commands.runOnce(() -> {
                 lastState = currentState;
                 currentState = state;
-                
-                CommandScheduler.getInstance().cancelAll();
             }
         );
     }

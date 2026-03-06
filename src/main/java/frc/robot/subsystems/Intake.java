@@ -22,6 +22,7 @@ public class Intake extends SubsystemBase {
 
     public enum Position {
         STOW(0.5),
+        PULSE(8),
         DEPLOY(10);
 
         public final double value;
@@ -55,10 +56,6 @@ public class Intake extends SubsystemBase {
         return pivotMotor.getPosition().getValueAsDouble();
     }
 
-    public double getTorqueCurrent() {
-        return pivotMotor.getTorqueCurrent().getValueAsDouble();
-    }
-
     public boolean atPosition(Position position) {
         return MathUtil.isNear(position.value, getPosition(), Constants.Intake.tolerance);
     }
@@ -68,13 +65,21 @@ public class Intake extends SubsystemBase {
             () -> pivotMotor.setControl(new MotionMagicVoltage(position.value)),
             this
         )
-        .until(() -> atPosition(position) || Math.abs(getTorqueCurrent()) > 118);
+        .until(() -> atPosition(position));
     }
 
     public Command setPercentCmd(double percent) {
         return Commands.runOnce(
             () -> rollerMotor.setControl(new VoltageOut(percent * 12)),
             this
+        );
+    }
+
+    public Command togglePositionCmd() {
+        return Commands.either(
+            setPositionCmd(Position.DEPLOY),
+            setPositionCmd(Position.STOW),
+            () -> atPosition(Position.STOW)
         );
     }
 

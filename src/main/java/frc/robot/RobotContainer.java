@@ -9,6 +9,7 @@ import org.littletonrobotics.junction.Logger;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import frc.robot.StateMachine.State;
+import frc.robot.subsystems.Climber;
 import frc.robot.subsystems.Drivetrain;
 import frc.robot.subsystems.Intake;
 import frc.robot.subsystems.Shooter;
@@ -27,6 +28,7 @@ public class RobotContainer {
     private Transfer transfer;
     private Spindexer spindexer;
     private Intake intake;
+    private Climber climber;
 
     public RobotContainer() {
         fsm = new StateMachine();
@@ -43,6 +45,12 @@ public class RobotContainer {
         transfer = new Transfer(Constants.Transfer.motorID);
         spindexer = new Spindexer(Constants.Spindexer.motorID);
         intake = new Intake(Constants.Intake.pivotMotorID, Constants.Intake.rollerMotorID);
+        climber = new Climber(Constants.Climber.motorID);
+
+        ShotCalculator.configure(
+            drivetrain::getEstimatedPose,
+            drivetrain::getSpeeds
+        );
 
         configureFSMTriggers();
         configureBindings();
@@ -65,7 +73,7 @@ public class RobotContainer {
                     Commands.repeatingSequence(
                         intake.setPercentCmd(1),
                         intake.setPositionCmd(Intake.Position.DEPLOY),
-                        intake.setPositionCmd(Intake.Position.STOW),
+                        intake.setPositionCmd(Intake.Position.PULSE),
                         Commands.waitSeconds(0.3)
                     ),
 
@@ -94,11 +102,15 @@ public class RobotContainer {
     private void configureBindings() {
         drivetrain.setDefaultCommand(
             drivetrain.setFOCSpeedsCmd(
-                () -> -controller.getLeftY() * Constants.Drivetrain.maxSpeed,
-                () -> -controller.getLeftX() * Constants.Drivetrain.maxSpeed,
+                () -> controller.getLeftY() * Constants.Drivetrain.maxSpeed,
+                () -> controller.getLeftX() * Constants.Drivetrain.maxSpeed,
                 () -> -controller.getRightX() * Constants.Drivetrain.maxAngularSpeed
             )
         );
+
+        controller.x().onTrue(Commands.runOnce(drivetrain::seedFieldCentric));
+        controller.a().onTrue(intake.togglePositionCmd());
+        controller.y().onTrue(climber.togglePositionCmd());
 
         controller.leftBumper()
             .onTrue(fsm.setStateCmd(State.INTAKE))
@@ -107,14 +119,17 @@ public class RobotContainer {
         controller.rightBumper()
             .onTrue(fsm.setStateCmd(State.OUTTAKE))
             .onFalse(fsm.setStateCmd(State.IDLE));
+
+        controller.leftTrigger()
+            .onTrue(drivetrain.setSlowedCmd(true))
+            .onFalse(drivetrain.setSlowedCmd(false));
     }
 
     public void periodic() {
         drivetrain.addVisionMeasurements(vision.getPoseEstimates());
-        ShotCalculator.updateState(drivetrain.getEstimatedPose(), drivetrain.getSpeeds());
 
         Logger.recordOutput("Estimated Robot Pose", drivetrain.getEstimatedPose());
-        Logger.recordOutput("Last Robot State", fsm.lastState.toString());
-        Logger.recordOutput("Current Robot State", fsm.currentState.toString());
+        Logger.recordOutput("Last Robot State", fsm.getLastState().toString());
+        Logger.recordOutput("Current Robot State", fsm.getCurrentState().toString());
     }
 }
