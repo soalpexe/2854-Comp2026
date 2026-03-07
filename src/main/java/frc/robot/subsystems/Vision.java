@@ -17,8 +17,8 @@ public class Vision extends SubsystemBase {
 
     public Pose2d getPoseEstimate(String cameraID) {
         Pose2d estimate = Utilities.getAlliance() == Alliance.Red ?
-            LimelightHelpers.getBotPose2d_wpiRed(cameraID) :
-            LimelightHelpers.getBotPose2d_wpiBlue(cameraID);
+            LimelightHelpers.getBotPose2d_wpiBlue(cameraID) :
+            LimelightHelpers.getBotPose2d_wpiRed(cameraID);
 
         RawFiducial[] rawFiducials = LimelightHelpers.getRawFiducials(cameraID);
 

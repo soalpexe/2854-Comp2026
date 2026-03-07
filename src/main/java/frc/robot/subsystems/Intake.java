@@ -18,8 +18,6 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
 
 public class Intake extends SubsystemBase {
-    private TalonFX pivotMotor, rollerMotor;
-
     public enum Position {
         STOW(0.5),
         PULSE(8),
@@ -31,6 +29,8 @@ public class Intake extends SubsystemBase {
             this.value = value;
         }
     }
+
+    private TalonFX pivotMotor, rollerMotor;
 
     public Intake(int pivotMotorID, int rollerMotorID) {
         pivotMotor = new TalonFX(pivotMotorID);

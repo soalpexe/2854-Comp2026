@@ -11,17 +11,16 @@ import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 
 public class StateMachine {
-    private HashMap<State, Trigger> stateTriggers;
-    private HashMap<Transition, Trigger> transitionTriggers;
-
-    private State lastState, currentState;
-
     public enum State {
         IDLE,
-        STOW,
         INTAKE,
         OUTTAKE
     }
+
+    private State lastState, currentState;
+
+    private HashMap<State, Trigger> stateTriggers;
+    private HashMap<Transition, Trigger> transitionTriggers;
 
     private class Transition {
         public final State startState, endState;

@@ -6,6 +6,7 @@ package frc.robot;
 
 import org.littletonrobotics.junction.Logger;
 
+import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import frc.robot.StateMachine.State;
@@ -19,6 +20,8 @@ import frc.robot.subsystems.Vision;
 
 public class RobotContainer {
     private StateMachine fsm;
+
+    private CommandScheduler scheduler;
     private CommandXboxController controller;
 
     private Drivetrain drivetrain;
@@ -32,6 +35,8 @@ public class RobotContainer {
 
     public RobotContainer() {
         fsm = new StateMachine();
+
+        scheduler = CommandScheduler.getInstance();
         controller = new CommandXboxController(Constants.controllerID);
 
         drivetrain = new Drivetrain(
@@ -57,6 +62,8 @@ public class RobotContainer {
     }
 
     private void configureFSMTriggers() {
+        fsm.getStateTrigger(State.IDLE).onFalse(climber.setPositionCmd(Climber.Position.STOW));
+
         fsm.getStateTrigger(State.INTAKE)
             .onTrue(
                 Commands.sequence(
@@ -109,8 +116,11 @@ public class RobotContainer {
         );
 
         controller.x().onTrue(Commands.runOnce(drivetrain::seedFieldCentric));
-        controller.a().onTrue(intake.togglePositionCmd());
-        controller.y().onTrue(climber.togglePositionCmd());
+
+        if (fsm.getCurrentState() == State.IDLE) {
+            controller.a().onTrue(intake.togglePositionCmd());
+            controller.y().onTrue(climber.togglePositionCmd());
+        }
 
         controller.leftBumper()
             .onTrue(fsm.setStateCmd(State.INTAKE))
@@ -123,6 +133,11 @@ public class RobotContainer {
         controller.leftTrigger()
             .onTrue(drivetrain.setSlowedCmd(true))
             .onFalse(drivetrain.setSlowedCmd(false));
+    }
+
+    public void reset() {
+        scheduler.cancelAll();
+        scheduler.schedule(fsm.setStateCmd(State.IDLE));
     }
 
     public void periodic() {

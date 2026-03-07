@@ -17,8 +17,6 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
 
 public class Climber extends SubsystemBase {
-    private TalonFX motor;
-
     public enum Position {
         STOW(0),
         DEPLOY(80);
@@ -29,6 +27,8 @@ public class Climber extends SubsystemBase {
             this.value = value;
         }
     }
+
+    private TalonFX motor;
 
     public Climber(int motorID) {
         motor = new TalonFX(motorID);
