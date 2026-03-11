@@ -30,9 +30,8 @@ public class Constants {
     }
 
     public static class Drivetrain {
-        public static final double aimingP = 8, aimingI = 0, aimingD = 0;
-
         public static final double slowPercent = 0.2;
+        public static final double aimingP = 8, aimingI = 0, aimingD = 0;
 
         private static final Slot0Configs steerGains = new Slot0Configs()
             .withKP(100).withKI(0).withKD(0.5)

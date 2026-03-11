@@ -39,9 +39,9 @@ public class Drivetrain extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder> imp
     private SwerveRequest.FieldCentric focRequest;
     private SwerveRequest.RobotCentric rocRequest;
 
-    private PIDController aimingPID;
-
     private boolean isSlowed, isAiming;
+
+    private PIDController aimingPID;
 
     public Drivetrain(SwerveDrivetrainConstants drivetrainConfig, double odomFrequency, SwerveModuleConstants<?, ?, ?>... moduleConfigs) {
         super(TalonFX::new, TalonFX::new, CANcoder::new, drivetrainConfig, odomFrequency, moduleConfigs);
@@ -52,11 +52,11 @@ public class Drivetrain extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder> imp
 
         rocRequest = new SwerveRequest.RobotCentric();
 
-        aimingPID = new PIDController(Constants.Drivetrain.aimingP, Constants.Drivetrain.aimingI, Constants.Drivetrain.aimingD);
-        aimingPID.enableContinuousInput(-Math.PI, Math.PI);
-
         isSlowed = false;
         isAiming = false;
+
+        aimingPID = new PIDController(Constants.Drivetrain.aimingP, Constants.Drivetrain.aimingI, Constants.Drivetrain.aimingD);
+        aimingPID.enableContinuousInput(-Math.PI, Math.PI);
 
         configureAutoBuilder();
     }
@@ -67,7 +67,7 @@ public class Drivetrain extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder> imp
                 this::getEstimatedPose,
                 this::resetPose,
                 this::getSpeeds,
-                this::setROCSpeeds,
+                this::requestSpeeds,
                 new PPHolonomicDriveController(
                     new PIDConstants(5, 0, 0),
                     new PIDConstants(5, 0, 0)
@@ -83,12 +83,6 @@ public class Drivetrain extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder> imp
         }
     }
 
-    private double calcAimingPID(double targetHeading) {
-        double power = aimingPID.calculate(getHeading().getRadians(), targetHeading);
-        return MathUtil.clamp(power, -Constants.Drivetrain.maxAngularSpeed, Constants.Drivetrain.maxAngularSpeed);
-    }
-    
-
     public Pose2d getEstimatedPose() {
         return getState().Pose;
     }
@@ -101,6 +95,14 @@ public class Drivetrain extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder> imp
         return getState().Speeds;
     }
 
+    public boolean isSlowed() {
+        return isSlowed;
+    }
+
+    public boolean isAiming() {
+        return isAiming;
+    }
+
     public void addVisionMeasurements(Pose2d... rawEstimates) {
         for (Pose2d rawEstimate : rawEstimates) {
             if (Utilities.isValidPose(rawEstimate)) {
@@ -110,28 +112,28 @@ public class Drivetrain extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder> imp
         }
     }
 
-    public void setROCSpeeds(ChassisSpeeds speeds) {
+    public void requestSpeeds(ChassisSpeeds speeds) {
         double percent = isSlowed ? Constants.Drivetrain.slowPercent : 1;
 
-        setControl(rocRequest
+        rocRequest
             .withVelocityX(speeds.vxMetersPerSecond * percent)
             .withVelocityY(speeds.vyMetersPerSecond * percent)
-        );
+            .withRotationalRate(speeds.omegaRadiansPerSecond * percent);
 
-        if (!isAiming) setControl(focRequest.withRotationalRate(speeds.omegaRadiansPerSecond * percent));
+        focRequest
+            .withVelocityX(speeds.vxMetersPerSecond * percent)
+            .withVelocityY(speeds.vyMetersPerSecond * percent)
+            .withRotationalRate(speeds.omegaRadiansPerSecond * percent);
     }
 
-    public Command setFOCSpeedsCmd(DoubleSupplier vxSupplier, DoubleSupplier vySupplier, DoubleSupplier omegaSupplier) {
-        return run(() -> {
-            double percent = isSlowed ? Constants.Drivetrain.slowPercent : 1;
-
-            setControl(focRequest
-                .withVelocityX(vxSupplier.getAsDouble() * percent)
-                .withVelocityY(vySupplier.getAsDouble() * percent)
-            );
-
-            if (!isAiming) setControl(focRequest.withRotationalRate(omegaSupplier.getAsDouble() * percent));
-        });
+    public Command requestSpeedsCmd(DoubleSupplier vxSupplier, DoubleSupplier vySupplier, DoubleSupplier omegaSupplier) {
+        return run(() -> requestSpeeds(
+            new ChassisSpeeds(
+                vxSupplier.getAsDouble(),
+                vySupplier.getAsDouble(),
+                omegaSupplier.getAsDouble()
+            )
+        ));
     }
 
     public Command setSlowedCmd(boolean value) {
@@ -139,7 +141,10 @@ public class Drivetrain extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder> imp
     }
 
     public Command setAimingCmd(boolean value) {
-        return Commands.runOnce(() -> isAiming = value);
+        return Commands.runOnce(() -> {
+            isAiming = value;
+            if (isAiming) aimingPID.reset();
+        });
     }
 
     @Override
@@ -150,6 +155,15 @@ public class Drivetrain extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder> imp
             );
         }
 
-        if (isAiming) setControl(focRequest.withRotationalRate(calcAimingPID(ShotCalculator.getTargetHeading())));
+        if (isAiming) {
+            double omega = aimingPID.calculate(getHeading().getRadians(), ShotCalculator.getTargetHeading());
+            omega = MathUtil.clamp(omega, -Constants.Drivetrain.maxAngularSpeed, Constants.Drivetrain.maxAngularSpeed);
+
+            rocRequest.withRotationalRate(omega);
+            focRequest.withRotationalRate(omega);
+        }
+
+        if (DriverStation.isAutonomous()) setControl(rocRequest);
+        else setControl(focRequest);
     }
 }

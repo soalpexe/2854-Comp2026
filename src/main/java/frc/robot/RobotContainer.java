@@ -94,10 +94,7 @@ public class RobotContainer {
             .onTrue(
                 Commands.parallel(
                     drivetrain.setAimingCmd(true),
-                    Commands.sequence(
-                        Commands.waitSeconds(3),
-                        intake.pulseCmd()
-                    ),
+                    intake.pulseCmd(),
 
                     Commands.sequence(
                         transfer.setPercentCmd(1),
@@ -126,7 +123,7 @@ public class RobotContainer {
 
     private void configureBindings() {
         drivetrain.setDefaultCommand(
-            drivetrain.setFOCSpeedsCmd(
+            drivetrain.requestSpeedsCmd(
                 () -> controller.getLeftY() * Constants.Drivetrain.maxSpeed,
                 () -> controller.getLeftX() * Constants.Drivetrain.maxSpeed,
                 () -> -controller.getRightX() * Constants.Drivetrain.maxAngularSpeed
@@ -171,6 +168,10 @@ public class RobotContainer {
         drivetrain.addVisionMeasurements(vision.getPoseEstimates());
 
         Logger.recordOutput("Estimated Robot Pose", drivetrain.getEstimatedPose());
+
+        Logger.recordOutput("Is Slowed", drivetrain.isSlowed());
+        Logger.recordOutput("Is Aiming", drivetrain.isAiming());
+        
         Logger.recordOutput("Last Robot State", fsm.getLastState().toString());
         Logger.recordOutput("Current Robot State", fsm.getCurrentState().toString());
     }
