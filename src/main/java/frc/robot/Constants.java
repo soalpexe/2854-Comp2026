@@ -21,6 +21,8 @@ public class Constants {
     public static final double deadband = 0.1;
 
     public static final Rotation2d redPerspective = Rotation2d.kZero, bluePerspective = Rotation2d.k180deg;
+    
+    public static final double odomFrequency = 250;
 
     public static class Field {
         public static final Pose2d redHubPose = new Pose2d(11.915, 4.03, new Rotation2d());
@@ -28,10 +30,9 @@ public class Constants {
     }
 
     public static class Drivetrain {
-        public static final double translationP = 0, translationI = 0, translationD = 0;
-        public static final double headingP = 8, headingI = 0, headingD = 0;
+        public static final double aimingP = 8, aimingI = 0, aimingD = 0;
 
-        public static final double odomFrequency = 250;
+        public static final double slowPercent = 0.2;
 
         private static final Slot0Configs steerGains = new Slot0Configs()
             .withKP(100).withKI(0).withKD(0.5)

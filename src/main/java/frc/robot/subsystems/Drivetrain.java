@@ -4,7 +4,10 @@
 
 package frc.robot.subsystems;
 
+import java.io.IOException;
 import java.util.function.DoubleSupplier;
+
+import org.json.simple.parser.ParseException;
 
 import com.ctre.phoenix6.Utils;
 import com.ctre.phoenix6.hardware.CANcoder;
@@ -13,6 +16,10 @@ import com.ctre.phoenix6.swerve.SwerveDrivetrain;
 import com.ctre.phoenix6.swerve.SwerveDrivetrainConstants;
 import com.ctre.phoenix6.swerve.SwerveModuleConstants;
 import com.ctre.phoenix6.swerve.SwerveRequest;
+import com.pathplanner.lib.auto.AutoBuilder;
+import com.pathplanner.lib.config.PIDConstants;
+import com.pathplanner.lib.config.RobotConfig;
+import com.pathplanner.lib.controllers.PPHolonomicDriveController;
 
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.controller.PIDController;
@@ -32,7 +39,7 @@ public class Drivetrain extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder> imp
     private SwerveRequest.FieldCentric focRequest;
     private SwerveRequest.RobotCentric rocRequest;
 
-    private PIDController translationPID, headingPID;
+    private PIDController aimingPID;
 
     private boolean isSlowed, isAiming;
 
@@ -45,16 +52,39 @@ public class Drivetrain extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder> imp
 
         rocRequest = new SwerveRequest.RobotCentric();
 
-        translationPID = new PIDController(Constants.Drivetrain.translationP, Constants.Drivetrain.translationI, Constants.Drivetrain.translationD);
-        headingPID = new PIDController(Constants.Drivetrain.headingP, Constants.Drivetrain.headingI, Constants.Drivetrain.headingD);
-        headingPID.enableContinuousInput(-Math.PI, Math.PI);
+        aimingPID = new PIDController(Constants.Drivetrain.aimingP, Constants.Drivetrain.aimingI, Constants.Drivetrain.aimingD);
+        aimingPID.enableContinuousInput(-Math.PI, Math.PI);
 
         isSlowed = false;
         isAiming = false;
+
+        configureAutoBuilder();
+    }
+
+    private void configureAutoBuilder() {
+        try {
+            AutoBuilder.configure(
+                this::getEstimatedPose,
+                this::resetPose,
+                this::getSpeeds,
+                this::setROCSpeeds,
+                new PPHolonomicDriveController(
+                    new PIDConstants(5, 0, 0),
+                    new PIDConstants(5, 0, 0)
+                ),
+                RobotConfig.fromGUISettings(),
+                () -> Utilities.getAlliance() == Alliance.Red,
+                this
+            );
+        }
+
+        catch (IOException | ParseException e) {
+            e.printStackTrace();
+        }
     }
 
     private double calcAimingPID(double targetHeading) {
-        double power = headingPID.calculate(getHeading().getRadians(), targetHeading);
+        double power = aimingPID.calculate(getHeading().getRadians(), targetHeading);
         return MathUtil.clamp(power, -Constants.Drivetrain.maxAngularSpeed, Constants.Drivetrain.maxAngularSpeed);
     }
     
@@ -81,24 +111,26 @@ public class Drivetrain extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder> imp
     }
 
     public void setROCSpeeds(ChassisSpeeds speeds) {
-        double percent = isSlowed ? 0.2 : 1;
+        double percent = isSlowed ? Constants.Drivetrain.slowPercent : 1;
 
         setControl(rocRequest
             .withVelocityX(speeds.vxMetersPerSecond * percent)
             .withVelocityY(speeds.vyMetersPerSecond * percent)
-            .withRotationalRate(isAiming ? calcAimingPID(ShotCalculator.getTargetHeading()) : speeds.omegaRadiansPerSecond * percent)
         );
+
+        if (!isAiming) setControl(focRequest.withRotationalRate(speeds.omegaRadiansPerSecond * percent));
     }
 
     public Command setFOCSpeedsCmd(DoubleSupplier vxSupplier, DoubleSupplier vySupplier, DoubleSupplier omegaSupplier) {
         return run(() -> {
-            double percent = isSlowed ? 0.2 : 1;
+            double percent = isSlowed ? Constants.Drivetrain.slowPercent : 1;
 
             setControl(focRequest
                 .withVelocityX(vxSupplier.getAsDouble() * percent)
                 .withVelocityY(vySupplier.getAsDouble() * percent)
-                .withRotationalRate(isAiming ? calcAimingPID(ShotCalculator.getTargetHeading()) : omegaSupplier.getAsDouble() * percent)
             );
+
+            if (!isAiming) setControl(focRequest.withRotationalRate(omegaSupplier.getAsDouble() * percent));
         });
     }
 
@@ -117,5 +149,7 @@ public class Drivetrain extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder> imp
                 Utilities.getAlliance() == Alliance.Red ? Constants.redPerspective : Constants.bluePerspective
             );
         }
+
+        if (isAiming) setControl(focRequest.withRotationalRate(calcAimingPID(ShotCalculator.getTargetHeading())));
     }
 }

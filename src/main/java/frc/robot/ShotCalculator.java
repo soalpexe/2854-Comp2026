@@ -46,10 +46,10 @@ public class ShotCalculator {
     }
 
     public static void configure(Supplier<Pose2d> poseSupplier, Supplier<ChassisSpeeds> speedsSupplier) {
-        notifier = new Notifier(ShotCalculator::updateState);
-        notifier.startPeriodic(1 / Constants.Drivetrain.odomFrequency);
-        
         ShotCalculator.poseSupplier = poseSupplier;
         ShotCalculator.speedsSupplier = speedsSupplier;
+        
+        notifier = new Notifier(ShotCalculator::updateState);
+        notifier.startPeriodic(1 / Constants.odomFrequency);
     }
 }

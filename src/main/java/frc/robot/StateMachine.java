@@ -13,8 +13,9 @@ import edu.wpi.first.wpilibj2.command.button.Trigger;
 public class StateMachine {
     public enum State {
         IDLE,
+        UNJAM,
         INTAKE,
-        OUTTAKE
+        SHOOT
     }
 
     private State lastState, currentState;

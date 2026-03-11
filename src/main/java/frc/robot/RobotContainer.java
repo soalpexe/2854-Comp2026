@@ -6,6 +6,8 @@ package frc.robot;
 
 import org.littletonrobotics.junction.Logger;
 
+import com.pathplanner.lib.auto.NamedCommands;
+
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
@@ -41,7 +43,7 @@ public class RobotContainer {
 
         drivetrain = new Drivetrain(
             Constants.Drivetrain.drivetrainConfig,
-            Constants.Drivetrain.odomFrequency,
+            Constants.odomFrequency,
             Constants.Drivetrain.frontLeftConfig, Constants.Drivetrain.frontRightConfig, Constants.Drivetrain.backLeftConfig, Constants.Drivetrain.backRightConfig
         );
         vision = new Vision();
@@ -59,10 +61,25 @@ public class RobotContainer {
 
         configureFSMTriggers();
         configureBindings();
+        configureNamedCmds();
     }
 
     private void configureFSMTriggers() {
-        fsm.getStateTrigger(State.IDLE).onFalse(climber.setPositionCmd(Climber.Position.STOW));
+        fsm.getStateTrigger(State.UNJAM)
+            .onTrue(
+                Commands.sequence(
+                    intake.setPercentCmd(-1),
+                    transfer.setPercentCmd(1),
+                    spindexer.setPercentCmd(1)
+                )
+            )
+            .onFalse(
+                Commands.sequence(
+                    intake.setPercentCmd(0),
+                    transfer.setPercentCmd(0),
+                    spindexer.setPercentCmd(0)
+                )
+            );
 
         fsm.getStateTrigger(State.INTAKE)
             .onTrue(
@@ -73,18 +90,19 @@ public class RobotContainer {
             )
             .onFalse(intake.setPercentCmd(0));
 
-        fsm.getStateTrigger(State.OUTTAKE)
+        fsm.getStateTrigger(State.SHOOT)
             .onTrue(
                 Commands.parallel(
                     drivetrain.setAimingCmd(true),
-                    Commands.repeatingSequence(
-                        intake.setPercentCmd(1),
-                        intake.setPositionCmd(Intake.Position.DEPLOY),
-                        intake.setPositionCmd(Intake.Position.PULSE),
-                        Commands.waitSeconds(0.3)
+                    Commands.sequence(
+                        Commands.waitSeconds(3),
+                        intake.pulseCmd()
                     ),
 
                     Commands.sequence(
+                        transfer.setPercentCmd(1),
+                        spindexer.setPercentCmd(1),
+
                         shooter.setPercentCmd(0.5),
                         Commands.waitSeconds(0.3),
                         transfer.setPercentCmd(-1),
@@ -101,7 +119,7 @@ public class RobotContainer {
                     spindexer.setPercentCmd(0),
                     Commands.waitSeconds(0.3),
                     transfer.setPercentCmd(0),
-                    shooter.setPercentCmd(0.3)
+                    shooter.setPercentCmd(0)
                 )
             );
     }
@@ -116,23 +134,32 @@ public class RobotContainer {
         );
 
         controller.x().onTrue(Commands.runOnce(drivetrain::seedFieldCentric));
+        controller.a().onTrue(intake.togglePositionCmd());
 
-        if (fsm.getCurrentState() == State.IDLE) {
-            controller.a().onTrue(intake.togglePositionCmd());
-            controller.y().onTrue(climber.togglePositionCmd());
-        }
+        controller.b()
+            .onTrue(fsm.setStateCmd(State.UNJAM))
+            .onFalse(fsm.setStateCmd(State.IDLE));
 
         controller.leftBumper()
             .onTrue(fsm.setStateCmd(State.INTAKE))
             .onFalse(fsm.setStateCmd(State.IDLE));
             
         controller.rightBumper()
-            .onTrue(fsm.setStateCmd(State.OUTTAKE))
+            .onTrue(fsm.setStateCmd(State.SHOOT))
             .onFalse(fsm.setStateCmd(State.IDLE));
 
-        controller.leftTrigger()
+        controller.rightTrigger()
             .onTrue(drivetrain.setSlowedCmd(true))
             .onFalse(drivetrain.setSlowedCmd(false));
+    }
+
+    private void configureNamedCmds() {
+        NamedCommands.registerCommand("DeployIntake", intake.setPositionCmd(Intake.Position.DEPLOY));
+
+        NamedCommands.registerCommand("SetStateIdle", fsm.setStateCmd(State.IDLE));
+        NamedCommands.registerCommand("SetStateUnjam", fsm.setStateCmd(State.UNJAM));
+        NamedCommands.registerCommand("SetStateIntake", fsm.setStateCmd(State.INTAKE));
+        NamedCommands.registerCommand("SetStateShoot", fsm.setStateCmd(State.SHOOT));
     }
 
     public void reset() {
