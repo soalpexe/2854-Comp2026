@@ -20,7 +20,7 @@ import frc.robot.Constants;
 public class Intake extends SubsystemBase {
     public enum Position {
         STOW(0.5),
-        PULSE(8),
+        PULSE(5),
         DEPLOY(10.5);
 
         public final double value;
@@ -80,17 +80,6 @@ public class Intake extends SubsystemBase {
             setPositionCmd(Position.DEPLOY),
             setPositionCmd(Position.STOW),
             () -> atPosition(Position.STOW)
-        );
-    }
-
-    public Command pulseCmd() {
-        return Commands.sequence(
-            setPercentCmd(1),
-            Commands.repeatingSequence(
-                setPositionCmd(Position.PULSE),
-                setPositionCmd(Position.DEPLOY),
-                Commands.waitSeconds(0.3)
-            )
         );
     }
 

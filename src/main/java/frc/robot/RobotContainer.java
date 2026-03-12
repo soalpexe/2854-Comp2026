@@ -59,66 +59,68 @@ public class RobotContainer {
             drivetrain::getSpeeds
         );
 
-        configureFSMTriggers();
+        configureFSM();
         configureBindings();
         configureNamedCmds();
     }
 
-    private void configureFSMTriggers() {
-        fsm.getStateTrigger(State.UNJAM)
-            .onTrue(
-                Commands.sequence(
-                    intake.setPercentCmd(-1),
-                    transfer.setPercentCmd(1),
-                    spindexer.setPercentCmd(1)
-                )
+    private void configureFSM() {
+        fsm.configureState(
+            State.UNJAM,
+            Commands.sequence(
+                intake.setPercentCmd(-1),
+                transfer.setPercentCmd(1),
+                spindexer.setPercentCmd(1)
+            ),
+            Commands.none(),
+            Commands.sequence(
+                intake.setPercentCmd(0),
+                transfer.setPercentCmd(0),
+                spindexer.setPercentCmd(0)
             )
-            .onFalse(
-                Commands.sequence(
-                    intake.setPercentCmd(0),
-                    transfer.setPercentCmd(0),
-                    spindexer.setPercentCmd(0)
-                )
-            );
+        );
+        
+        fsm.configureState(
+            State.INTAKE,
+            Commands.sequence(
+                intake.setPositionCmd(Intake.Position.DEPLOY),
+                intake.setPercentCmd(1)
+            ),
+            Commands.none(),
+            intake.setPercentCmd(0)
+        );
+        
+        fsm.configureState(
+            State.SHOOT,
+            Commands.sequence(
+                drivetrain.setAimingCmd(true),
 
-        fsm.getStateTrigger(State.INTAKE)
-            .onTrue(
-                Commands.sequence(
-                    intake.setPositionCmd(Intake.Position.DEPLOY),
-                    intake.setPercentCmd(1)
-                )
+                transfer.setPercentCmd(1),
+                spindexer.setPercentCmd(1),
+                shooter.setPercentCmd(0.5),
+                Commands.waitSeconds(0.3),
+
+                transfer.setPercentCmd(-1),
+                spindexer.setPercentCmd(-1),
+                Commands.waitSeconds(1)
+            ),
+            Commands.sequence(
+                intake.setPositionCmd(Intake.Position.PULSE),
+                intake.setPositionCmd(Intake.Position.DEPLOY),
+                Commands.waitSeconds(0.3)
+            ),
+            Commands.sequence(
+                drivetrain.setAimingCmd(false),
+                intake.setPositionCmd(Intake.Position.DEPLOY),
+                intake.setPercentCmd(0),
+
+                spindexer.setPercentCmd(0),
+                Commands.waitSeconds(0.3),
+
+                transfer.setPercentCmd(0),
+                shooter.setPercentCmd(0)
             )
-            .onFalse(intake.setPercentCmd(0));
-
-        fsm.getStateTrigger(State.SHOOT)
-            .onTrue(
-                Commands.parallel(
-                    drivetrain.setAimingCmd(true),
-                    intake.pulseCmd(),
-
-                    Commands.sequence(
-                        transfer.setPercentCmd(1),
-                        spindexer.setPercentCmd(1),
-
-                        shooter.setPercentCmd(0.5),
-                        Commands.waitSeconds(0.3),
-                        transfer.setPercentCmd(-1),
-                        spindexer.setPercentCmd(-1)
-                    )
-                )
-            )
-            .onFalse(
-                Commands.sequence(
-                    drivetrain.setAimingCmd(false),
-                    intake.setPositionCmd(Intake.Position.DEPLOY),
-                    intake.setPercentCmd(0),
-
-                    spindexer.setPercentCmd(0),
-                    Commands.waitSeconds(0.3),
-                    transfer.setPercentCmd(0),
-                    shooter.setPercentCmd(0)
-                )
-            );
+        );
     }
 
     private void configureBindings() {
@@ -134,16 +136,16 @@ public class RobotContainer {
         controller.a().onTrue(intake.togglePositionCmd());
 
         controller.b()
-            .onTrue(fsm.setStateCmd(State.UNJAM))
-            .onFalse(fsm.setStateCmd(State.IDLE));
+            .onTrue(fsm.requestStateCmd(State.UNJAM))
+            .onFalse(fsm.requestStateCmd(State.IDLE));
 
         controller.leftBumper()
-            .onTrue(fsm.setStateCmd(State.INTAKE))
-            .onFalse(fsm.setStateCmd(State.IDLE));
+            .onTrue(fsm.requestStateCmd(State.INTAKE))
+            .onFalse(fsm.requestStateCmd(State.IDLE));
             
         controller.rightBumper()
-            .onTrue(fsm.setStateCmd(State.SHOOT))
-            .onFalse(fsm.setStateCmd(State.IDLE));
+            .onTrue(fsm.requestStateCmd(State.SHOOT))
+            .onFalse(fsm.requestStateCmd(State.IDLE));
 
         controller.rightTrigger()
             .onTrue(drivetrain.setSlowedCmd(true))
@@ -153,15 +155,15 @@ public class RobotContainer {
     private void configureNamedCmds() {
         NamedCommands.registerCommand("DeployIntake", intake.setPositionCmd(Intake.Position.DEPLOY));
 
-        NamedCommands.registerCommand("SetStateIdle", fsm.setStateCmd(State.IDLE));
-        NamedCommands.registerCommand("SetStateUnjam", fsm.setStateCmd(State.UNJAM));
-        NamedCommands.registerCommand("SetStateIntake", fsm.setStateCmd(State.INTAKE));
-        NamedCommands.registerCommand("SetStateShoot", fsm.setStateCmd(State.SHOOT));
+        NamedCommands.registerCommand("SetStateIdle", fsm.requestStateCmd(State.IDLE));
+        NamedCommands.registerCommand("SetStateUnjam", fsm.requestStateCmd(State.UNJAM));
+        NamedCommands.registerCommand("SetStateIntake", fsm.requestStateCmd(State.INTAKE));
+        NamedCommands.registerCommand("SetStateShoot", fsm.requestStateCmd(State.SHOOT));
     }
 
     public void reset() {
         scheduler.cancelAll();
-        scheduler.schedule(fsm.setStateCmd(State.IDLE));
+        scheduler.schedule(fsm.requestStateCmd(State.IDLE));
     }
 
     public void periodic() {
@@ -169,10 +171,8 @@ public class RobotContainer {
 
         Logger.recordOutput("Estimated Robot Pose", drivetrain.getEstimatedPose());
 
+        Logger.recordOutput("Robot State", fsm.getActiveState().toString());
         Logger.recordOutput("Is Slowed", drivetrain.isSlowed());
         Logger.recordOutput("Is Aiming", drivetrain.isAiming());
-        
-        Logger.recordOutput("Last Robot State", fsm.getLastState().toString());
-        Logger.recordOutput("Current Robot State", fsm.getCurrentState().toString());
     }
 }

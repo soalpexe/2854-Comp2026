@@ -5,6 +5,7 @@
 package frc.robot;
 
 import java.util.HashMap;
+import java.util.Set;
 
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
@@ -17,11 +18,6 @@ public class StateMachine {
         INTAKE,
         SHOOT
     }
-
-    private State lastState, currentState;
-
-    private HashMap<State, Trigger> stateTriggers;
-    private HashMap<Transition, Trigger> transitionTriggers;
 
     private class Transition {
         public final State startState, endState;
@@ -46,46 +42,68 @@ public class StateMachine {
         }
     }
 
+    private State activeState, requestedState;
+
+    private HashMap<State, Trigger> stateTriggers;
+    private HashMap<Transition, Command> transitions;
+
     public StateMachine() {
-        lastState = State.IDLE;
-        currentState = State.IDLE;
+        activeState = State.IDLE;
+        requestedState = State.IDLE;
 
         stateTriggers = new HashMap<>();
-        transitionTriggers = new HashMap<>();
+        transitions = new HashMap<>();
 
         for (State state : State.values()) {
-            stateTriggers.put(state, new Trigger(() -> currentState == state));
+            stateTriggers.put(state, new Trigger(() -> activeState == state && requestedState == state));
+
+            configureState(
+                state,
+                Commands.none(),
+                Commands.none(),
+                Commands.none()
+            );
         }
     }
 
-    public State getLastState() {
-        return lastState;
+    public State getActiveState() {
+        return activeState;
     }
     
-    public State getCurrentState() {
-        return currentState;
+    public State getRequestedState() {
+        return requestedState;
     }
 
-    public Trigger getStateTrigger(State state) {
-        return stateTriggers.get(state);
-    }
-    
-    public Trigger getTransitionTrigger(State startState, State endState) {
-        return transitionTriggers.get(new Transition(startState, endState));
+    public void configureState(State state, Command enter, Command execute, Command exit) {
+        stateTriggers.get(state)
+            .onTrue(
+                Commands.sequence(
+                    enter,
+                    Commands.repeatingSequence(execute)
+                )
+            )
+            .onFalse(
+                Commands.sequence(
+                    exit,
+                    Commands.defer(
+                        () -> {
+                            Transition transition = new Transition(activeState, requestedState);
+
+                            if (transitions.containsKey(transition)) return transitions.get(transition);
+                            return Commands.none();
+                        },
+                        Set.of()
+                    ),
+                    Commands.runOnce(() -> activeState = requestedState)
+                )
+            );
     }
 
-    public void addTransitionTrigger(State startState, State endState) {
-        transitionTriggers.put(
-            new Transition(startState, endState),
-            new Trigger(() -> lastState == startState && currentState == endState)
-        );
+    public void addTransition(State startState, State endState, Command cmd) {
+        transitions.put(new Transition(startState, endState), cmd);
     }
 
-    public Command setStateCmd(State state) {
-        return Commands.runOnce(() -> {
-                lastState = currentState;
-                currentState = state;
-            }
-        );
+    public Command requestStateCmd(State state) {
+        return Commands.runOnce(() -> requestedState = state);
     }
 }
