@@ -149,12 +149,6 @@ public class Drivetrain extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder> imp
 
     @Override
     public void periodic() {
-        if (DriverStation.isDisabled()) {
-            setOperatorPerspectiveForward(
-                Utilities.getAlliance() == Alliance.Red ? Constants.redPerspective : Constants.bluePerspective
-            );
-        }
-
         if (isAiming) {
             double omega = aimingPID.calculate(getHeading().getRadians(), ShotCalculator.getTargetHeading());
             omega = MathUtil.clamp(omega, -Constants.Drivetrain.maxAngularSpeed, Constants.Drivetrain.maxAngularSpeed);

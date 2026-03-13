@@ -105,8 +105,9 @@ public class RobotContainer {
                 Commands.waitSeconds(1)
             ),
             Commands.sequence(
-                intake.setPositionCmd(Intake.Position.PULSE),
+                intake.setPercentCmd(1),
                 intake.setPositionCmd(Intake.Position.DEPLOY),
+                intake.setPositionCmd(Intake.Position.PULSE),
                 Commands.waitSeconds(0.3)
             ),
             Commands.sequence(
@@ -126,8 +127,8 @@ public class RobotContainer {
     private void configureBindings() {
         drivetrain.setDefaultCommand(
             drivetrain.requestSpeedsCmd(
-                () -> controller.getLeftY() * Constants.Drivetrain.maxSpeed,
-                () -> controller.getLeftX() * Constants.Drivetrain.maxSpeed,
+                () -> -controller.getLeftY() * Constants.Drivetrain.maxSpeed,
+                () -> -controller.getLeftX() * Constants.Drivetrain.maxSpeed,
                 () -> -controller.getRightX() * Constants.Drivetrain.maxAngularSpeed
             )
         );
@@ -170,6 +171,7 @@ public class RobotContainer {
         drivetrain.addVisionMeasurements(vision.getPoseEstimates());
 
         Logger.recordOutput("Estimated Robot Pose", drivetrain.getEstimatedPose());
+        Logger.recordOutput("Target Pose", ShotCalculator.getTargetPose());
 
         Logger.recordOutput("Robot State", fsm.getActiveState().toString());
         Logger.recordOutput("Is Slowed", drivetrain.isSlowed());

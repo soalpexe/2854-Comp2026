@@ -20,7 +20,7 @@ import frc.robot.Constants;
 public class Intake extends SubsystemBase {
     public enum Position {
         STOW(0.5),
-        PULSE(5),
+        PULSE(6),
         DEPLOY(10.5);
 
         public final double value;

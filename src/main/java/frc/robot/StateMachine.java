@@ -76,7 +76,7 @@ public class StateMachine {
 
     public void configureState(State state, Command enter, Command execute, Command exit) {
         stateTriggers.get(state)
-            .onTrue(
+            .whileTrue(
                 Commands.sequence(
                     enter,
                     Commands.repeatingSequence(execute)

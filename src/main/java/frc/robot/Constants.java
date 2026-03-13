@@ -14,19 +14,20 @@ import com.ctre.phoenix6.swerve.SwerveModuleConstants.*;
 
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.units.measure.*;
 
 public class Constants {
     public static final int controllerID = 0;
     public static final double deadband = 0.1;
-
-    public static final Rotation2d redPerspective = Rotation2d.kZero, bluePerspective = Rotation2d.k180deg;
     
     public static final double odomFrequency = 250;
 
     public static class Field {
-        public static final Pose2d redHubPose = new Pose2d(11.915, 4.03, new Rotation2d());
-        public static final Pose2d blueHubPose = new Pose2d(4.625, 4.03, new Rotation2d());
+        public static final Translation2d hubPose = new Translation2d(4.625, 4.03);
+        
+        public static final Translation2d feedLeftPose = new Translation2d(1.977, 6.1413);
+        public static final Translation2d feedRightPose = new Translation2d(1.977, 1.988);
     }
 
     public static class Drivetrain {
