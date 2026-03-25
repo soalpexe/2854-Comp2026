@@ -19,7 +19,8 @@ public class Constants {
     public static final int controllerID = 0;
     public static final double deadband = 0.1;
     
-    public static final double odomFrequency = 250;
+    public static final double period = 0.02;
+    public static final double odomFrequency = 250, odomPeriod = 1 / odomFrequency;
 
     public static class Field {
         public static final Translation2d hubPose = new Translation2d(4.625, 4.03);
@@ -29,8 +30,7 @@ public class Constants {
     }
 
     public static class Drivetrain {
-        public static final double slowPercent = 0.2;
-        public static final double aimingP = 8, aimingI = 0, aimingD = 0;
+        public static final double headingP = 8, headingI = 0, headingD = 0;
 
         private static final Slot0Configs steerGains = new Slot0Configs()
             .withKP(100).withKI(0).withKD(0.5)
@@ -55,7 +55,7 @@ public class Constants {
         private static final TalonFXConfiguration steerInitialConfigs = new TalonFXConfiguration()
             .withCurrentLimits(
                 new CurrentLimitsConfigs()
-                    .withStatorCurrentLimit(Amps.of(60))
+                    .withStatorCurrentLimit(Amps.of(80))
                     .withStatorCurrentLimitEnable(true)
             );
 
@@ -67,7 +67,7 @@ public class Constants {
         public static final LinearVelocity speedAt12Volts = MetersPerSecond.of(4.58);
 
         public static final double maxSpeed = speedAt12Volts.in(MetersPerSecond);
-        public static final double maxAngularSpeed = RotationsPerSecond.of(0.75).in(RadiansPerSecond);
+        public static final double maxAngularSpeed = RotationsPerSecond.of(1).in(RadiansPerSecond);
 
         private static final double coupleRatio = 3.5714285714285716;
         private static final double driveGearRatio = 6.746031746031747;
@@ -114,45 +114,45 @@ public class Constants {
                 .withSteerFrictionVoltage(steerFrictionVoltage)
                 .withDriveFrictionVoltage(driveFrictionVoltage);
 
-        private static final int frontLeftDriveMotorId = 7;
-        private static final int frontLeftSteerMotorId = 8;
-        private static final int frontLeftEncoderId = 54;
-        private static final Angle frontLeftEncoderOffset = Rotations.of(0.402587890625);
+        private static final int frontLeftDriveMotorId = 8;
+        private static final int frontLeftSteerMotorId = 7;
+        private static final int frontLeftEncoderId = 13;
+        private static final Angle frontLeftEncoderOffset = Rotations.of(0.383544921875);
         private static final boolean frontLeftSteerMotorInverted = true;
         private static final boolean frontLeftEncoderInverted = false;
 
-        private static final Distance frontLeftXPos = Inches.of(11.25);
-        private static final Distance frontLeftYPos = Inches.of(10.25);
+        private static final Distance frontLeftXPos = Inches.of(11.375);
+        private static final Distance frontLeftYPos = Inches.of(10.3);
 
         private static final int frontRightDriveMotorId = 3;
         private static final int frontRightSteerMotorId = 4;
-        private static final int frontRightEncoderId = 51;
-        private static final Angle frontRightEncoderOffset = Rotations.of(-0.437744140625);
+        private static final int frontRightEncoderId = 53;
+        private static final Angle frontRightEncoderOffset = Rotations.of(-0.38330078125);
         private static final boolean frontRightSteerMotorInverted = true;
         private static final boolean frontRightEncoderInverted = false;
 
-        private static final Distance frontRightXPos = Inches.of(11.25);
-        private static final Distance frontRightYPos = Inches.of(-10.25);
+        private static final Distance frontRightXPos = Inches.of(11.375);
+        private static final Distance frontRightYPos = Inches.of(-10.3);
 
         private static final int backLeftDriveMotorId = 1;
         private static final int backLeftSteerMotorId = 2;
-        private static final int backLeftEncoderId = 53;
-        private static final Angle backLeftEncoderOffset = Rotations.of(-0.39306640625);
+        private static final int backLeftEncoderId = 51;
+        private static final Angle backLeftEncoderOffset = Rotations.of(0.114013671875);
         private static final boolean backLeftSteerMotorInverted = true;
         private static final boolean backLeftEncoderInverted = false;
 
-        private static final Distance backLeftXPos = Inches.of(-11.25);
-        private static final Distance backLeftYPos = Inches.of(10.25);
+        private static final Distance backLeftXPos = Inches.of(-11.375);
+        private static final Distance backLeftYPos = Inches.of(10.3);
 
         private static final int backRightDriveMotorId = 5;
         private static final int backRightSteerMotorId = 6;
-        private static final int backRightEncoderId = 52;
-        private static final Angle backRightEncoderOffset = Rotations.of(0.044921875);
+        private static final int backRightEncoderId = 54;
+        private static final Angle backRightEncoderOffset = Rotations.of(0.3076171875);
         private static final boolean backRightSteerMotorInverted = true;
         private static final boolean backRightEncoderInverted = false;
 
-        private static final Distance backRightXPos = Inches.of(-11.25);
-        private static final Distance backRightYPos = Inches.of(-10.25);
+        private static final Distance backRightXPos = Inches.of(-11.375);
+        private static final Distance backRightYPos = Inches.of(-10.3);
 
         public static final SwerveModuleConstants<TalonFXConfiguration, TalonFXConfiguration, CANcoderConfiguration> frontLeftConfig =
             constantCreator.createModuleConstants(
@@ -197,11 +197,13 @@ public class Constants {
 
     public static class Intake {
         public static final int pivotMotorID = 9, rollerMotorID = 10;
+
         public static final double tolerance = 0.2;
     }
     
     public static class Climber {
         public static final int motorID = 15;
+
         public static final double tolerance = 0.2;
     }
 }

@@ -21,10 +21,10 @@ import com.pathplanner.lib.config.PIDConstants;
 import com.pathplanner.lib.config.RobotConfig;
 import com.pathplanner.lib.controllers.PPHolonomicDriveController;
 
-import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
@@ -36,27 +36,35 @@ import frc.robot.ShotCalculator;
 import frc.robot.Utilities;
 
 public class Drivetrain extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder> implements Subsystem {
+    public enum Substate {
+        DRIVE,
+        SNAKE,
+        AIM
+    }
+
+    private PIDController headingPID;
+
+    private Translation2d xlast, x;
+    
+    private Substate substate;
     private SwerveRequest.FieldCentric focRequest;
     private SwerveRequest.RobotCentric rocRequest;
-
-    private boolean isSlowed, isAiming;
-
-    private PIDController aimingPID;
 
     public Drivetrain(SwerveDrivetrainConstants drivetrainConfig, double odomFrequency, SwerveModuleConstants<?, ?, ?>... moduleConfigs) {
         super(TalonFX::new, TalonFX::new, CANcoder::new, drivetrainConfig, odomFrequency, moduleConfigs);
 
+        headingPID = new PIDController(Constants.Drivetrain.headingP, Constants.Drivetrain.headingI, Constants.Drivetrain.headingD);
+        headingPID.enableContinuousInput(-Math.PI, Math.PI);
+
+        xlast = new Translation2d();
+        x = new Translation2d();
+
+        substate = Substate.DRIVE;
+
         focRequest = new SwerveRequest.FieldCentric()
             .withDeadband(Constants.Drivetrain.maxSpeed * Constants.deadband)
             .withRotationalDeadband(Constants.Drivetrain.maxAngularSpeed * Constants.deadband);
-
         rocRequest = new SwerveRequest.RobotCentric();
-
-        isSlowed = false;
-        isAiming = false;
-
-        aimingPID = new PIDController(Constants.Drivetrain.aimingP, Constants.Drivetrain.aimingI, Constants.Drivetrain.aimingD);
-        aimingPID.enableContinuousInput(-Math.PI, Math.PI);
 
         configureAutoBuilder();
     }
@@ -83,6 +91,10 @@ public class Drivetrain extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder> imp
         }
     }
 
+    public Substate getSubstate() {
+        return substate;
+    }
+
     public Pose2d getEstimatedPose() {
         return getState().Pose;
     }
@@ -95,12 +107,13 @@ public class Drivetrain extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder> imp
         return getState().Speeds;
     }
 
-    public boolean isSlowed() {
-        return isSlowed;
+    public Translation2d getDisplacement() {
+        return getEstimatedPose().getTranslation();
     }
 
-    public boolean isAiming() {
-        return isAiming;
+    public Translation2d getVelocity() {
+        Translation2d dx = x.minus(xlast);
+        return dx.div(Constants.period);
     }
 
     public void addVisionMeasurements(Pose2d... rawEstimates) {
@@ -113,17 +126,15 @@ public class Drivetrain extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder> imp
     }
 
     public void requestSpeeds(ChassisSpeeds speeds) {
-        double percent = isSlowed ? Constants.Drivetrain.slowPercent : 1;
+        focRequest
+            .withVelocityX(speeds.vxMetersPerSecond)
+            .withVelocityY(speeds.vyMetersPerSecond)
+            .withRotationalRate(speeds.omegaRadiansPerSecond);
 
         rocRequest
-            .withVelocityX(speeds.vxMetersPerSecond * percent)
-            .withVelocityY(speeds.vyMetersPerSecond * percent)
-            .withRotationalRate(speeds.omegaRadiansPerSecond * percent);
-
-        focRequest
-            .withVelocityX(speeds.vxMetersPerSecond * percent)
-            .withVelocityY(speeds.vyMetersPerSecond * percent)
-            .withRotationalRate(speeds.omegaRadiansPerSecond * percent);
+            .withVelocityX(speeds.vxMetersPerSecond)
+            .withVelocityY(speeds.vyMetersPerSecond)
+            .withRotationalRate(speeds.omegaRadiansPerSecond);
     }
 
     public Command requestSpeedsCmd(DoubleSupplier vxSupplier, DoubleSupplier vySupplier, DoubleSupplier omegaSupplier) {
@@ -136,25 +147,38 @@ public class Drivetrain extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder> imp
         ));
     }
 
-    public Command setSlowedCmd(boolean value) {
-        return Commands.runOnce(() -> isSlowed = value);
-    }
-
-    public Command setAimingCmd(boolean value) {
-        return Commands.runOnce(() -> {
-            isAiming = value;
-            if (isAiming) aimingPID.reset();
-        });
+    public Command setSubstateCmd(Substate substate) {
+        return Commands.runOnce(() -> this.substate = substate);
     }
 
     @Override
     public void periodic() {
-        if (isAiming) {
-            double omega = aimingPID.calculate(getHeading().getRadians(), ShotCalculator.getTargetHeading());
-            omega = MathUtil.clamp(omega, -Constants.Drivetrain.maxAngularSpeed, Constants.Drivetrain.maxAngularSpeed);
+        xlast = x;
+        x = getDisplacement();
 
-            rocRequest.withRotationalRate(omega);
-            focRequest.withRotationalRate(omega);
+        double omega = 0;
+
+        switch (substate) {
+            case SNAKE:
+                if (getVelocity().getNorm() > 0.5) {
+                    omega = headingPID.calculate(getHeading().getRadians(), getVelocity().getAngle().getRadians());
+
+                    focRequest.withRotationalRate(omega);
+                    rocRequest.withRotationalRate(omega);
+                }
+
+                break;
+
+            case AIM:
+                omega = headingPID.calculate(getHeading().getRadians(), ShotCalculator.getTargetHeading());
+
+                focRequest.withRotationalRate(omega);
+                rocRequest.withRotationalRate(omega);
+                
+                break;
+        
+            default:
+                break;
         }
 
         if (DriverStation.isAutonomous()) setControl(rocRequest);

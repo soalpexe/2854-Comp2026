@@ -29,6 +29,7 @@ public class Climber extends SubsystemBase {
     }
 
     private TalonFX motor;
+    private MotionMagicVoltage positionRequest;
 
     public Climber(int motorID) {
         motor = new TalonFX(motorID);
@@ -42,6 +43,7 @@ public class Climber extends SubsystemBase {
         motorConfig.MotionMagic.MotionMagicAcceleration = 120;
 
         motor.getConfigurator().apply(motorConfig);
+        positionRequest = new MotionMagicVoltage(0);
     }
 
     public boolean atPosition(Position position) {
@@ -54,18 +56,10 @@ public class Climber extends SubsystemBase {
 
     public Command setPositionCmd(Position position) {
         return Commands.run(
-            () -> motor.setControl(new MotionMagicVoltage(position.value)),
+            () -> motor.setControl(positionRequest.withPosition(position.value)),
             this
         )
         .until(() -> atPosition(position));
-    }
-
-    public Command togglePositionCmd() {
-        return Commands.either(
-            setPositionCmd(Position.DEPLOY),
-            setPositionCmd(Position.STOW),
-            () -> atPosition(Position.STOW)
-        );
     }
 
     @Override

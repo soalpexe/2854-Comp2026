@@ -11,9 +11,19 @@ import com.ctre.phoenix6.hardware.TalonFX;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import frc.robot.ShotCalculator;
 
 public class Shooter extends SubsystemBase {
+    public enum Substate {
+        IDLE,
+        REV,
+        UNJAM
+    }
+
     private TalonFX leftMotor, rightMotor;
+
+    private Substate substate;
+    private VoltageOut voltageRequest;
 
     public Shooter(int leftMotorID, int rightMotorID) {
         leftMotor = new TalonFX(leftMotorID);
@@ -29,18 +39,37 @@ public class Shooter extends SubsystemBase {
 
         leftMotor.getConfigurator().apply(leftMotorConfig);
         rightMotor.getConfigurator().apply(rightMotorConfig);
+
+        substate = Substate.IDLE;
+        voltageRequest = new VoltageOut(0);
     }
 
-    public Command setPercentCmd(double percent) {
-        return Commands.runOnce(
-            () -> {
-                leftMotor.setControl(new VoltageOut(percent * 12));
-                rightMotor.setControl(new VoltageOut(-percent * 12));
-            },
-            this
-        );
+    public void setPercent(double percent) {
+        leftMotor.setControl(voltageRequest.withOutput(percent * 12));
+        rightMotor.setControl(voltageRequest.withOutput(-percent * 12));
+    }
+    
+    public Command setSubstateCmd(Substate substate) {
+        return Commands.runOnce(() -> this.substate = substate);
     }
 
     @Override
-    public void periodic() {}
+    public void periodic() {
+        switch (substate) {
+            case IDLE:
+                setPercent(0.2);
+                break;
+
+            case REV:
+                setPercent(ShotCalculator.getTargetPercent());
+                break;
+
+            case UNJAM:
+                setPercent(1);
+                break;
+        
+            default:
+                break;
+        }
+    }
 }

@@ -18,10 +18,18 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
 
 public class Intake extends SubsystemBase {
+    public enum Substate {
+        STOW,
+        OFF,
+        ON,
+        RAMP,
+        UNJAM
+    }
+
     public enum Position {
         STOW(0.5),
-        PULSE(6),
-        DEPLOY(10.5);
+        RAMP(6),
+        DEPLOY(11);
 
         public final double value;
 
@@ -31,6 +39,10 @@ public class Intake extends SubsystemBase {
     }
 
     private TalonFX pivotMotor, rollerMotor;
+
+    private Substate substate;
+    private MotionMagicVoltage positionRequest;
+    private VoltageOut voltageRequest;
 
     public Intake(int pivotMotorID, int rollerMotorID) {
         pivotMotor = new TalonFX(pivotMotorID);
@@ -50,6 +62,10 @@ public class Intake extends SubsystemBase {
 
         pivotMotor.getConfigurator().apply(pivotMotorConfig);
         rollerMotor.getConfigurator().apply(rollerMotorConfig);
+
+        substate = Substate.STOW;
+        positionRequest = new MotionMagicVoltage(0);
+        voltageRequest = new VoltageOut(0);
     }
 
     public double getPosition() {
@@ -60,29 +76,48 @@ public class Intake extends SubsystemBase {
         return MathUtil.isNear(position.value, getPosition(), Constants.Intake.tolerance);
     }
 
-    public Command setPositionCmd(Position position) {
-        return Commands.run(
-            () -> pivotMotor.setControl(new MotionMagicVoltage(position.value)),
-            this
-        )
-        .until(() -> atPosition(position));
+    public void setPosition(Position position) {
+        pivotMotor.setControl(positionRequest.withPosition(position.value));
     }
 
-    public Command setPercentCmd(double percent) {
-        return Commands.runOnce(
-            () -> rollerMotor.setControl(new VoltageOut(percent * 12)),
-            this
-        );
+    public void setPercent(double percent) {
+        rollerMotor.setControl(voltageRequest.withOutput(percent * 12));
     }
-
-    public Command togglePositionCmd() {
-        return Commands.either(
-            setPositionCmd(Position.DEPLOY),
-            setPositionCmd(Position.STOW),
-            () -> atPosition(Position.STOW)
-        );
+    
+    public Command setSubstateCmd(Substate substate) {
+        return Commands.runOnce(() -> this.substate = substate);
     }
 
     @Override
-    public void periodic() {}
+    public void periodic() {
+        switch (substate) {
+            case STOW:
+                setPosition(Position.STOW);
+                setPercent(0);
+                break;
+                
+            case OFF:
+                setPosition(Position.DEPLOY);
+                setPercent(0);
+                break;
+                
+            case ON:
+                setPosition(Position.DEPLOY);
+                setPercent(1);
+                break;
+
+            case RAMP:
+                setPosition(Position.RAMP);
+                setPercent(1);
+                break;
+                
+            case UNJAM:
+                setPosition(Position.DEPLOY);
+                setPercent(-1);
+                break;
+        
+            default:
+                break;
+        }
+    }
 }

@@ -14,7 +14,16 @@ import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
 public class Spindexer extends SubsystemBase {
+    public enum Substate {
+        OFF,
+        ON,
+        UNJAM
+    }
+
     private TalonFX motor;
+
+    private Substate substate;
+    private VoltageOut voltageRequest;
 
     public Spindexer(int motorID) {
         motor = new TalonFX(motorID);
@@ -25,15 +34,36 @@ public class Spindexer extends SubsystemBase {
         motorConfig.CurrentLimits.StatorCurrentLimitEnable = true;
 
         motor.getConfigurator().apply(motorConfig);
+
+        substate = Substate.OFF;
+        voltageRequest = new VoltageOut(0);
     }
 
-    public Command setPercentCmd(double percent) {
-        return Commands.runOnce(
-            () -> motor.setControl(new VoltageOut(percent * 12)),
-            this
-        );
+    public void setPercent(double percent) {
+        motor.setControl(voltageRequest.withOutput(percent * 12));
+    }
+
+    public Command setSubstateCmd(Substate substate) {
+        return Commands.runOnce(() -> this.substate = substate);
     }
 
     @Override
-    public void periodic() {}
+    public void periodic() {
+        switch (substate) {
+            case OFF:
+                setPercent(0);
+                break;
+
+            case ON:
+                setPercent(-1);
+                break;
+
+            case UNJAM:
+                setPercent(1);
+                break;
+
+            default:
+                break;
+        }
+    }
 }

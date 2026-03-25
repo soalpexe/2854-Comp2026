@@ -6,104 +6,111 @@ package frc.robot;
 
 import java.util.HashMap;
 import java.util.Set;
+import java.util.function.Supplier;
 
 import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 
 public class StateMachine {
     public enum State {
         IDLE,
-        UNJAM,
+        STOW,
         INTAKE,
-        SHOOT
+        SHOOT,
+        SHOOT_AND_INTAKE,
+        UNJAM
     }
 
-    private class Transition {
-        public final State startState, endState;
-
-        public Transition(State startState, State endState) {
-            this.startState = startState;
-            this.endState = endState;
-        }
-
-        @Override
-        public boolean equals(Object obj) {
-            if (obj == null || getClass() != obj.getClass()) return false;
-            if (this == obj) return true;
-
-            Transition other = (Transition) obj;
-            return startState == other.startState && endState == other.endState;
-        }
-
-        @Override
-        public int hashCode() {
-            return startState.hashCode() * 31 + endState.hashCode();
-        }
-    }
+    private record Transition(State startState, State endState) {}
 
     private State activeState, requestedState;
 
-    private HashMap<State, Trigger> stateTriggers;
-    private HashMap<Transition, Command> transitions;
+    private HashMap<State, Supplier<Command>> enterSuppliers, executeSuppliers, exitSuppliers;
+    private HashMap<Transition, Supplier<Command>> transitionSuppliers;
 
     public StateMachine() {
-        activeState = State.IDLE;
-        requestedState = State.IDLE;
+        enterSuppliers = new HashMap<>();
+        executeSuppliers = new HashMap<>();
+        exitSuppliers = new HashMap<>();
+        
+        transitionSuppliers = new HashMap<>();
 
-        stateTriggers = new HashMap<>();
-        transitions = new HashMap<>();
+        new Trigger(() -> activeState == requestedState)
+            .whileTrue(Commands.defer(() -> getExecuteCmd(activeState).repeatedly(), Set.of()))
+            .onFalse(
+                Commands.defer(
+                    () -> {
+                        Transition transition = new Transition(activeState, requestedState);
+                        Command transitionCmd = transitionSuppliers.containsKey(transition) ?
+                            getTransitionCmd(transition) :
+                            Commands.sequence(
+                                getExitCmd(activeState),
+                                getEnterCmd(requestedState)
+                            );
+
+                        return Commands.sequence(
+                            transitionCmd,
+                            Commands.runOnce(() -> activeState = requestedState)
+                        );
+                    },
+                    Set.of()
+                )
+            );
 
         for (State state : State.values()) {
-            stateTriggers.put(state, new Trigger(() -> activeState == state && requestedState == state));
-
             configureState(
                 state,
-                Commands.none(),
-                Commands.none(),
-                Commands.none()
+                Commands::none,
+                Commands::none,
+                Commands::none
             );
         }
+
+        initialize(State.STOW);
     }
 
-    public State getActiveState() {
-        return activeState;
+    private Command getEnterCmd(State state) {
+        return enterSuppliers.get(state).get();
     }
     
-    public State getRequestedState() {
-        return requestedState;
+    private Command getExecuteCmd(State state) {
+        return executeSuppliers.get(state).get();
+    }
+    
+    private Command getExitCmd(State state) {
+        return exitSuppliers.get(state).get();
+    }
+    
+    private Command getTransitionCmd(Transition transition) {
+        return transitionSuppliers.get(transition).get();
     }
 
-    public void configureState(State state, Command enter, Command execute, Command exit) {
-        stateTriggers.get(state)
-            .whileTrue(
-                Commands.sequence(
-                    enter,
-                    Commands.repeatingSequence(execute)
-                )
-            )
-            .onFalse(
-                Commands.sequence(
-                    exit,
-                    Commands.defer(
-                        () -> {
-                            Transition transition = new Transition(activeState, requestedState);
-
-                            if (transitions.containsKey(transition)) return transitions.get(transition);
-                            return Commands.none();
-                        },
-                        Set.of()
-                    ),
-                    Commands.runOnce(() -> activeState = requestedState)
-                )
-            );
+    public State getState() {
+        return activeState;
     }
 
-    public void addTransition(State startState, State endState, Command cmd) {
-        transitions.put(new Transition(startState, endState), cmd);
+    private void initialize(State state) {
+        activeState = state;
+        requestedState = state;
+
+        CommandScheduler.getInstance().schedule(getEnterCmd(state));
+    }
+
+    public void configureState(State state, Supplier<Command> enterSupplier, Supplier<Command> executeSupplier, Supplier<Command> exitSupplier) {
+        enterSuppliers.put(state, enterSupplier);
+        executeSuppliers.put(state, executeSupplier);
+        exitSuppliers.put(state, exitSupplier);
+    }
+
+    public void addTransition(State startState, State endState, Supplier<Command> transitionSupplier) {
+        transitionSuppliers.put(new Transition(startState, endState), transitionSupplier);
     }
 
     public Command requestStateCmd(State state) {
-        return Commands.runOnce(() -> requestedState = state);
+        return Commands.runOnce(() -> {
+            if (activeState == requestedState) requestedState = state;
+        });
     }
 }

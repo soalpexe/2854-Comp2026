@@ -29,17 +29,13 @@ public class Robot extends LoggedRobot {
     }
 
     @Override
-    public void autonomousInit() {
-        container.reset();
-    }
+    public void autonomousInit() {}
 
     @Override
     public void autonomousPeriodic() {}
 
     @Override
-    public void teleopInit() {
-        container.reset();
-    }
+    public void teleopInit() {}
 
     @Override
     public void teleopPeriodic() {}
