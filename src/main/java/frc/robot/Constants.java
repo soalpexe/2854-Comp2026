@@ -192,6 +192,8 @@ public class Constants {
 
         public static final Translation2d translationOffset = new Translation2d(-0.1905, -0.194945);
         public static final Rotation2d rotationOffset = Rotation2d.k180deg;
+
+        public static final double rpsToLinearVel = 0.3191858136;
     }
 
     public static class Transfer {

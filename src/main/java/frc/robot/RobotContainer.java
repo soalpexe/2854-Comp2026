@@ -220,8 +220,8 @@ public class RobotContainer {
     public void periodic() {
         drivetrain.addVisionMeasurements(vision.getPoseEstimates());
 
-        Logger.recordOutput("Estimated Robot Pose", drivetrain.getEstimatedPose());
+        Logger.recordOutput("Robot Pose", drivetrain.getEstimatedPose());
         Logger.recordOutput("Target Pose", ShotCalculator.getTargetPose());
-        Logger.recordOutput("Active State", fsm.getState().toString());
+        Logger.recordOutput("Robot State", fsm.getState().toString());
     }
 }
