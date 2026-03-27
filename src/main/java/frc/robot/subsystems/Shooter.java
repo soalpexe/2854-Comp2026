@@ -5,13 +5,19 @@
 package frc.robot.subsystems;
 
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
-import com.ctre.phoenix6.controls.VoltageOut;
+import com.ctre.phoenix6.controls.PositionVoltage;
+import com.ctre.phoenix6.controls.VelocityVoltage;
 import com.ctre.phoenix6.hardware.TalonFX;
+import com.ctre.phoenix6.signals.InvertedValue;
+import com.ctre.phoenix6.signals.NeutralModeValue;
 
+import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import frc.robot.Constants;
 import frc.robot.ShotCalculator;
+import frc.robot.ShotCalculator.ShotParameters;
 
 public class Shooter extends SubsystemBase {
     public enum Substate {
@@ -20,33 +26,63 @@ public class Shooter extends SubsystemBase {
         UNJAM
     }
 
-    private TalonFX leftMotor, rightMotor;
+    private TalonFX leftFlywheelMotor, rightFlywheelMotor, hoodMotor;
 
     private Substate substate;
-    private VoltageOut voltageRequest;
+    private VelocityVoltage velocityRequest;
+    private PositionVoltage positionRequest;
 
-    public Shooter(int leftMotorID, int rightMotorID) {
-        leftMotor = new TalonFX(leftMotorID);
-        rightMotor = new TalonFX(rightMotorID);
-
-        TalonFXConfiguration leftMotorConfig = new TalonFXConfiguration();
-        leftMotorConfig.CurrentLimits.StatorCurrentLimit = 40;
-        leftMotorConfig.CurrentLimits.StatorCurrentLimitEnable = true;
-
-        TalonFXConfiguration rightMotorConfig = new TalonFXConfiguration();
-        rightMotorConfig.CurrentLimits.StatorCurrentLimit = 40;
-        rightMotorConfig.CurrentLimits.StatorCurrentLimitEnable = true;
-
-        leftMotor.getConfigurator().apply(leftMotorConfig);
-        rightMotor.getConfigurator().apply(rightMotorConfig);
+    public Shooter(int leftFlywheelMotorID, int rightFlywheelMotorID, int hoodMotorID) {
+        leftFlywheelMotor = new TalonFX(leftFlywheelMotorID);
+        rightFlywheelMotor = new TalonFX(rightFlywheelMotorID);
+        hoodMotor = new TalonFX(hoodMotorID);
 
         substate = Substate.IDLE;
-        voltageRequest = new VoltageOut(0);
+        velocityRequest = new VelocityVoltage(0);
+        positionRequest = new PositionVoltage(0);
+
+        configureMotors();
     }
 
-    public void setPercent(double percent) {
-        leftMotor.setControl(voltageRequest.withOutput(percent * 12));
-        rightMotor.setControl(voltageRequest.withOutput(-percent * 12));
+    private void configureMotors() {
+        TalonFXConfiguration flywheelMotorConfig = new TalonFXConfiguration();
+        flywheelMotorConfig.Slot0.kS = 0.13;
+        flywheelMotorConfig.Slot0.kV = 0.115;
+
+        TalonFXConfiguration hoodMotorConfig = new TalonFXConfiguration();
+        hoodMotorConfig.MotorOutput.Inverted = InvertedValue.Clockwise_Positive;
+        hoodMotorConfig.MotorOutput.NeutralMode = NeutralModeValue.Brake;
+
+        hoodMotorConfig.Slot0.kP = 20;
+
+        leftFlywheelMotor.getConfigurator().apply(flywheelMotorConfig);
+        rightFlywheelMotor.getConfigurator().apply(flywheelMotorConfig);
+        hoodMotor.getConfigurator().apply(hoodMotorConfig);
+    }
+
+    public Rotation2d positionToAngle(double position) {
+        return Rotation2d.fromRotations(position / Constants.Shooter.motorToHoodRatio).plus(Constants.Shooter.minHardstopAngle);
+    }
+
+    public double angleToPosition(Rotation2d angle) {
+        return angle.minus(Constants.Shooter.minHardstopAngle).getRotations() * Constants.Shooter.motorToHoodRatio;
+    }
+
+    public double getPosition() {
+        return hoodMotor.getPosition().getValueAsDouble();
+    }
+
+    public Rotation2d getAngle() {
+        return positionToAngle(getPosition());
+    }
+
+    public void requestRPS(double rps) {
+        leftFlywheelMotor.setControl(velocityRequest.withVelocity(rps));
+        rightFlywheelMotor.setControl(velocityRequest.withVelocity(-rps));
+    }
+
+    public void requestAngle(Rotation2d angle) {
+        hoodMotor.setControl(positionRequest.withPosition(angleToPosition(angle)));
     }
     
     public Command setSubstateCmd(Substate substate) {
@@ -57,15 +93,20 @@ public class Shooter extends SubsystemBase {
     public void periodic() {
         switch (substate) {
             case IDLE:
-                setPercent(0.2);
+                requestAngle(Rotation2d.fromDegrees(20));
+                requestRPS(0); // TODO: Convert from raw voltage
                 break;
 
             case REV:
-                setPercent(ShotCalculator.getTargetPercent());
+                ShotParameters targetParams = ShotCalculator.getTargetParams();
+
+                requestAngle(targetParams.hoodAngle());
+                requestRPS(targetParams.rps());
                 break;
 
             case UNJAM:
-                setPercent(1);
+                requestAngle(Rotation2d.fromDegrees(20));
+                requestRPS(0); // TODO: Convert from raw voltage
                 break;
         
             default:

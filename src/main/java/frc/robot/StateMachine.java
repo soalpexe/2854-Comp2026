@@ -11,13 +11,13 @@ import java.util.function.Supplier;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.Commands;
-import edu.wpi.first.wpilibj2.command.button.Trigger;
 
 public class StateMachine {
     public enum State {
         IDLE,
         STOW,
         INTAKE,
+        INTAKE_AND_SNAKE,
         SHOOT,
         SHOOT_AND_INTAKE,
         UNJAM
@@ -37,28 +37,6 @@ public class StateMachine {
         
         transitionSuppliers = new HashMap<>();
 
-        new Trigger(() -> activeState == requestedState)
-            .whileTrue(Commands.defer(() -> getExecuteCmd(activeState).repeatedly(), Set.of()))
-            .onFalse(
-                Commands.defer(
-                    () -> {
-                        Transition transition = new Transition(activeState, requestedState);
-                        Command transitionCmd = transitionSuppliers.containsKey(transition) ?
-                            getTransitionCmd(transition) :
-                            Commands.sequence(
-                                getExitCmd(activeState),
-                                getEnterCmd(requestedState)
-                            );
-
-                        return Commands.sequence(
-                            transitionCmd,
-                            Commands.runOnce(() -> activeState = requestedState)
-                        );
-                    },
-                    Set.of()
-                )
-            );
-
         for (State state : State.values()) {
             configureState(
                 state,
@@ -67,8 +45,6 @@ public class StateMachine {
                 Commands::none
             );
         }
-
-        initialize(State.STOW);
     }
 
     private Command getEnterCmd(State state) {
@@ -91,11 +67,42 @@ public class StateMachine {
         return activeState;
     }
 
-    private void initialize(State state) {
+    public void initialize(State state) {
         activeState = state;
         requestedState = state;
 
-        CommandScheduler.getInstance().schedule(getEnterCmd(state));
+        CommandScheduler.getInstance().schedule(
+            Commands.sequence(
+                Commands.defer(() -> getEnterCmd(activeState), Set.of()),
+                Commands.repeatingSequence(
+                    Commands.defer(
+                        () -> {
+                            return getExecuteCmd(activeState)
+                                .repeatedly()
+                                .until(() -> activeState != requestedState);
+                        },
+                        Set.of()
+                    ),
+                    Commands.defer(
+                        () -> {
+                            Transition transition = new Transition(activeState, requestedState);
+                            Command transitionCmd = transitionSuppliers.containsKey(transition) ?
+                                getTransitionCmd(transition) :
+                                Commands.sequence(
+                                    getExitCmd(activeState),
+                                    getEnterCmd(requestedState)
+                                );
+
+                            return Commands.sequence(
+                                transitionCmd,
+                                Commands.runOnce(() -> activeState = requestedState)
+                            );
+                        },
+                        Set.of()
+                    )
+                )
+            ).ignoringDisable(true)
+        );
     }
 
     public void configureState(State state, Supplier<Command> enterSupplier, Supplier<Command> executeSupplier, Supplier<Command> exitSupplier) {
@@ -109,8 +116,9 @@ public class StateMachine {
     }
 
     public Command requestStateCmd(State state) {
-        return Commands.runOnce(() -> {
-            if (activeState == requestedState) requestedState = state;
-        });
+        return Commands.sequence(
+            Commands.waitUntil(() -> activeState == requestedState),
+            Commands.runOnce(() -> requestedState = state)
+        );
     }
 }

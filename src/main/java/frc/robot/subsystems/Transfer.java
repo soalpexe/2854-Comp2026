@@ -39,7 +39,7 @@ public class Transfer extends SubsystemBase {
         voltageRequest = new VoltageOut(0);
     }
 
-    public void setPercent(double percent) {
+    public void requestPercent(double percent) {
         motor.setControl(voltageRequest.withOutput(percent * 12));
     }
 
@@ -51,15 +51,15 @@ public class Transfer extends SubsystemBase {
     public void periodic() {
         switch (substate) {
             case OFF:
-                setPercent(0);
+                requestPercent(0);
                 break;
 
             case ON:
-                setPercent(-1);
+                requestPercent(-1);
                 break;
 
             case UNJAM:
-                setPercent(1);
+                requestPercent(1);
                 break;
 
             default:

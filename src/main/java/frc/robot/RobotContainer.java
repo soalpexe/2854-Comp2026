@@ -4,12 +4,13 @@
 
 package frc.robot;
 
+import java.util.Set;
+
 import org.littletonrobotics.junction.Logger;
 
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import frc.robot.StateMachine.State;
-import frc.robot.subsystems.Climber;
 import frc.robot.subsystems.Drivetrain;
 import frc.robot.subsystems.Intake;
 import frc.robot.subsystems.Shooter;
@@ -28,7 +29,6 @@ public class RobotContainer {
     private Transfer transfer;
     private Spindexer spindexer;
     private Intake intake;
-    private Climber climber;
 
     public RobotContainer() {
         fsm = new StateMachine();
@@ -41,14 +41,13 @@ public class RobotContainer {
         );
         vision = new Vision();
 
-        shooter = new Shooter(Constants.Shooter.leftMotorID, Constants.Shooter.rightMotorID);
+        shooter = new Shooter(Constants.Shooter.leftFlywheelMotorID, Constants.Shooter.rightFlywheelMotorID, Constants.Shooter.hoodMotorID);
         transfer = new Transfer(Constants.Transfer.motorID);
         spindexer = new Spindexer(Constants.Spindexer.motorID);
-        intake = new Intake(Constants.Intake.pivotMotorID, Constants.Intake.rollerMotorID);
-        climber = new Climber(Constants.Climber.motorID);
+        intake = new Intake(Constants.Intake.pivotMotorID, Constants.Intake.topRollerMotorID, Constants.Intake.bottomRollerMotorID);
 
         ShotCalculator.configure(
-            drivetrain::getDisplacement,
+            drivetrain::getEstimatedPose,
             drivetrain::getVelocity
         );
 
@@ -79,6 +78,13 @@ public class RobotContainer {
         
         fsm.configureState(
             State.INTAKE,
+            () -> intake.setSubstateCmd(Intake.Substate.ON),
+            Commands::none,
+            () -> intake.setSubstateCmd(Intake.Substate.OFF)
+        );
+
+        fsm.configureState(
+            State.INTAKE_AND_SNAKE,
             () -> Commands.sequence(
                 drivetrain.setSubstateCmd(Drivetrain.Substate.SNAKE),
                 intake.setSubstateCmd(Intake.Substate.ON)
@@ -163,6 +169,8 @@ public class RobotContainer {
                 intake.setSubstateCmd(Intake.Substate.OFF)
             )
         );
+        
+        fsm.initialize(State.STOW);
     }
 
     private void configureBindings() {
@@ -188,13 +196,24 @@ public class RobotContainer {
         controller.b()
             .onTrue(fsm.requestStateCmd(State.UNJAM))
             .onFalse(fsm.requestStateCmd(State.IDLE));
-            
-        controller.leftBumper()
-            .onTrue(fsm.requestStateCmd(State.INTAKE))
+
+        controller.leftBumper().or(controller.rightBumper())
+            .whileTrue(
+                Commands.defer(
+                    () -> {
+                        boolean lbPressed = controller.leftBumper().getAsBoolean(), rbPressed = controller.rightBumper().getAsBoolean();
+
+                        if (lbPressed && !rbPressed) return fsm.requestStateCmd(State.INTAKE);
+                        if (!lbPressed && rbPressed) return fsm.requestStateCmd(State.SHOOT);
+                        return fsm.requestStateCmd(State.SHOOT_AND_INTAKE);
+                    },
+                    Set.of()
+                ).repeatedly()
+            )
             .onFalse(fsm.requestStateCmd(State.IDLE));
-            
-        controller.rightBumper()
-            .onTrue(fsm.requestStateCmd(State.SHOOT))
+
+        controller.rightTrigger()
+            .onTrue(fsm.requestStateCmd(State.INTAKE_AND_SNAKE))
             .onFalse(fsm.requestStateCmd(State.IDLE));
     }
 
@@ -203,6 +222,6 @@ public class RobotContainer {
 
         Logger.recordOutput("Estimated Robot Pose", drivetrain.getEstimatedPose());
         Logger.recordOutput("Target Pose", ShotCalculator.getTargetPose());
-        Logger.recordOutput("Robot State", fsm.getState().toString());
+        Logger.recordOutput("Active State", fsm.getState().toString());
     }
 }

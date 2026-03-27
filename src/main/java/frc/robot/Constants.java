@@ -12,6 +12,7 @@ import com.ctre.phoenix6.signals.*;
 import com.ctre.phoenix6.swerve.*;
 import com.ctre.phoenix6.swerve.SwerveModuleConstants.*;
 
+import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.units.measure.*;
 
@@ -30,7 +31,7 @@ public class Constants {
     }
 
     public static class Drivetrain {
-        public static final double headingP = 8, headingI = 0, headingD = 0;
+        public static final double headingP = 10, headingI = 0, headingD = 0;
 
         private static final Slot0Configs steerGains = new Slot0Configs()
             .withKP(100).withKI(0).withKD(0.5)
@@ -184,7 +185,13 @@ public class Constants {
     }
 
     public static class Shooter {
-        public static final int leftMotorID = 12, rightMotorID = 13;
+        public static final int leftFlywheelMotorID = 12, rightFlywheelMotorID = 13, hoodMotorID = 15;
+
+        public static final double motorToHoodRatio = 34;
+        public static final Rotation2d minHardstopAngle = Rotation2d.fromDegrees(18);
+
+        public static final Translation2d translationOffset = new Translation2d(-0.1905, -0.194945);
+        public static final Rotation2d rotationOffset = Rotation2d.k180deg;
     }
 
     public static class Transfer {
@@ -196,7 +203,7 @@ public class Constants {
     }
 
     public static class Intake {
-        public static final int pivotMotorID = 9, rollerMotorID = 10;
+        public static final int pivotMotorID = 9, topRollerMotorID = 16, bottomRollerMotorID = 10;
 
         public static final double tolerance = 0.2;
     }

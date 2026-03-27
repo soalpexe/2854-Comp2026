@@ -44,11 +44,11 @@ public class Drivetrain extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder> imp
 
     private PIDController headingPID;
 
-    private Translation2d xlast, x;
+    private Translation2d rlast, r;
     
     private Substate substate;
-    private SwerveRequest.FieldCentric focRequest;
-    private SwerveRequest.RobotCentric rocRequest;
+    private SwerveRequest.FieldCentric fcRequest;
+    private SwerveRequest.RobotCentric rcRequest;
 
     public Drivetrain(SwerveDrivetrainConstants drivetrainConfig, double odomFrequency, SwerveModuleConstants<?, ?, ?>... moduleConfigs) {
         super(TalonFX::new, TalonFX::new, CANcoder::new, drivetrainConfig, odomFrequency, moduleConfigs);
@@ -56,15 +56,15 @@ public class Drivetrain extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder> imp
         headingPID = new PIDController(Constants.Drivetrain.headingP, Constants.Drivetrain.headingI, Constants.Drivetrain.headingD);
         headingPID.enableContinuousInput(-Math.PI, Math.PI);
 
-        xlast = new Translation2d();
-        x = new Translation2d();
+        rlast = new Translation2d();
+        r = new Translation2d();
 
         substate = Substate.DRIVE;
 
-        focRequest = new SwerveRequest.FieldCentric()
+        fcRequest = new SwerveRequest.FieldCentric()
             .withDeadband(Constants.Drivetrain.maxSpeed * Constants.deadband)
             .withRotationalDeadband(Constants.Drivetrain.maxAngularSpeed * Constants.deadband);
-        rocRequest = new SwerveRequest.RobotCentric();
+        rcRequest = new SwerveRequest.RobotCentric();
 
         configureAutoBuilder();
     }
@@ -112,8 +112,8 @@ public class Drivetrain extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder> imp
     }
 
     public Translation2d getVelocity() {
-        Translation2d dx = x.minus(xlast);
-        return dx.div(Constants.period);
+        Translation2d dr = r.minus(rlast);
+        return dr.div(Constants.period);
     }
 
     public void addVisionMeasurements(Pose2d... rawEstimates) {
@@ -126,15 +126,22 @@ public class Drivetrain extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder> imp
     }
 
     public void requestSpeeds(ChassisSpeeds speeds) {
-        focRequest
+        fcRequest
             .withVelocityX(speeds.vxMetersPerSecond)
             .withVelocityY(speeds.vyMetersPerSecond)
             .withRotationalRate(speeds.omegaRadiansPerSecond);
 
-        rocRequest
+        rcRequest
             .withVelocityX(speeds.vxMetersPerSecond)
             .withVelocityY(speeds.vyMetersPerSecond)
             .withRotationalRate(speeds.omegaRadiansPerSecond);
+    }
+
+    public void requestHeadingPID(Rotation2d targetHeading) {
+        double omega = headingPID.calculate(getHeading().getRadians(), targetHeading.getRadians());
+
+        fcRequest.withRotationalRate(omega);
+        rcRequest.withRotationalRate(omega);
     }
 
     public Command requestSpeedsCmd(DoubleSupplier vxSupplier, DoubleSupplier vySupplier, DoubleSupplier omegaSupplier) {
@@ -153,35 +160,24 @@ public class Drivetrain extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder> imp
 
     @Override
     public void periodic() {
-        xlast = x;
-        x = getDisplacement();
-
-        double omega = 0;
+        rlast = r;
+        r = getDisplacement();
 
         switch (substate) {
             case SNAKE:
-                if (getVelocity().getNorm() > 0.5) {
-                    omega = headingPID.calculate(getHeading().getRadians(), getVelocity().getAngle().getRadians());
-
-                    focRequest.withRotationalRate(omega);
-                    rocRequest.withRotationalRate(omega);
-                }
-
+                if (getVelocity().getNorm() > 1) requestHeadingPID(getVelocity().getAngle());
                 break;
 
             case AIM:
-                omega = headingPID.calculate(getHeading().getRadians(), ShotCalculator.getTargetHeading());
-
-                focRequest.withRotationalRate(omega);
-                rocRequest.withRotationalRate(omega);
-                
+                Rotation2d targetHeading = ShotCalculator.getTargetParams().heading();
+                requestHeadingPID(targetHeading.plus(Constants.Shooter.rotationOffset));
                 break;
         
             default:
                 break;
         }
 
-        if (DriverStation.isAutonomous()) setControl(rocRequest);
-        else setControl(focRequest);
+        if (DriverStation.isAutonomous()) setControl(rcRequest);
+        else setControl(fcRequest);
     }
 }

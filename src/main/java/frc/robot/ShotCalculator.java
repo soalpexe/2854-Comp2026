@@ -12,46 +12,45 @@ import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.wpilibj.Notifier;
 
 public class ShotCalculator {
+    public record ShotParameters(Rotation2d heading, Rotation2d hoodAngle, double rps) {}
+
     private static Notifier notifier;
 
-    private static Supplier<Translation2d> xrobotSupplier;
+    private static Supplier<Pose2d> robotPoseSupplier;
     private static Supplier<Translation2d> vrobotSupplier;
 
-    private static volatile Translation2d xtarget;
-    private static volatile double targetHeading, targetHoodAngle, targetPercent;
+    private static volatile Translation2d rtarget;
+    private static volatile ShotParameters targetParams;
 
     private static void updateState() {
-        Translation2d xrobot = xrobotSupplier.get();
+        Pose2d robotPose = robotPoseSupplier.get();
+        Translation2d rshooter = robotPose.getTranslation().plus(Constants.Shooter.translationOffset.rotateBy(robotPose.getRotation()));
 
-        if (xrobot.getX() > 4) {
-            if (xrobot.getY() > 4) xtarget = Constants.Field.feedLeftPose;
-            else xtarget = Constants.Field.feedRightPose;
+        if (robotPose.getX() > 4) {
+            if (robotPose.getY() > 4) rtarget = Constants.Field.feedLeftPose;
+            else rtarget = Constants.Field.feedRightPose;
         }
-        else xtarget = Constants.Field.hubPose;
+        else rtarget = Constants.Field.hubPose;
 
-        targetHeading = xtarget.minus(xrobot).getAngle().getRadians();
-        targetHoodAngle = 0;
-        targetPercent = 0.5;
+        ShotParameters rawParams = new ShotParameters(
+            rtarget.minus(rshooter).getAngle(),
+            Rotation2d.fromDegrees(30),
+            50
+        );
+
+        targetParams = rawParams;
     }
 
     public static Pose2d getTargetPose() {
-        return new Pose2d(xtarget, new Rotation2d());
+        return new Pose2d(rtarget, new Rotation2d());
     }
 
-    public static double getTargetHeading() {
-        return targetHeading;
+    public static ShotParameters getTargetParams() {
+        return targetParams;
     }
 
-    public static double getTargetHoodAngle() {
-        return targetHoodAngle;
-    }
-
-    public static double getTargetPercent() {
-        return targetPercent;
-    }
-
-    public static void configure(Supplier<Translation2d> xrobotSupplier, Supplier<Translation2d> vrobotSupplier) {
-        ShotCalculator.xrobotSupplier = xrobotSupplier;
+    public static void configure(Supplier<Pose2d> robotPoseSupplier, Supplier<Translation2d> vrobotSupplier) {
+        ShotCalculator.robotPoseSupplier = robotPoseSupplier;
         ShotCalculator.vrobotSupplier = vrobotSupplier;
         
         notifier = new Notifier(ShotCalculator::updateState);

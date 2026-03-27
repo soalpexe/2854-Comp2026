@@ -27,9 +27,9 @@ public class Intake extends SubsystemBase {
     }
 
     public enum Position {
-        STOW(0.5),
-        RAMP(6),
-        DEPLOY(11);
+        STOW(2.6),
+        RAMP(7),
+        DEPLOY(10.5);
 
         public final double value;
 
@@ -38,34 +38,34 @@ public class Intake extends SubsystemBase {
         }
     }
 
-    private TalonFX pivotMotor, rollerMotor;
+    private TalonFX pivotMotor, topRollerMotor, bottomRollerMotor;
 
     private Substate substate;
     private MotionMagicVoltage positionRequest;
     private VoltageOut voltageRequest;
 
-    public Intake(int pivotMotorID, int rollerMotorID) {
+    public Intake(int pivotMotorID, int topRollerMotorID, int bottomRollerMotorID) {
         pivotMotor = new TalonFX(pivotMotorID);
-        rollerMotor = new TalonFX(rollerMotorID);
-
-        TalonFXConfiguration pivotMotorConfig = new TalonFXConfiguration();
-        pivotMotorConfig.MotorOutput.Inverted = InvertedValue.Clockwise_Positive;
-        pivotMotorConfig.MotorOutput.NeutralMode = NeutralModeValue.Brake;
-
-        pivotMotorConfig.Slot0.kP = 10;
-        pivotMotorConfig.MotionMagic.MotionMagicCruiseVelocity = 40;
-        pivotMotorConfig.MotionMagic.MotionMagicAcceleration = 60;
-        
-        TalonFXConfiguration rollerMotorConfig = new TalonFXConfiguration();
-        rollerMotorConfig.CurrentLimits.StatorCurrentLimit = 40;
-        rollerMotorConfig.CurrentLimits.StatorCurrentLimitEnable = true;
-
-        pivotMotor.getConfigurator().apply(pivotMotorConfig);
-        rollerMotor.getConfigurator().apply(rollerMotorConfig);
+        topRollerMotor = new TalonFX(topRollerMotorID);
+        bottomRollerMotor = new TalonFX(bottomRollerMotorID);
 
         substate = Substate.STOW;
         positionRequest = new MotionMagicVoltage(0);
         voltageRequest = new VoltageOut(0);
+
+        configureMotors();
+    }
+
+    private void configureMotors() {
+        TalonFXConfiguration pivotMotorConfig = new TalonFXConfiguration();
+        pivotMotorConfig.MotorOutput.Inverted = InvertedValue.Clockwise_Positive;
+        pivotMotorConfig.MotorOutput.NeutralMode = NeutralModeValue.Brake;
+        
+        pivotMotorConfig.Slot0.kP = 10;
+        pivotMotorConfig.MotionMagic.MotionMagicCruiseVelocity = 200;
+        pivotMotorConfig.MotionMagic.MotionMagicAcceleration = 100;
+
+        pivotMotor.getConfigurator().apply(pivotMotorConfig);
     }
 
     public double getPosition() {
@@ -76,12 +76,13 @@ public class Intake extends SubsystemBase {
         return MathUtil.isNear(position.value, getPosition(), Constants.Intake.tolerance);
     }
 
-    public void setPosition(Position position) {
+    public void requestPosition(Position position) {
         pivotMotor.setControl(positionRequest.withPosition(position.value));
     }
 
-    public void setPercent(double percent) {
-        rollerMotor.setControl(voltageRequest.withOutput(percent * 12));
+    public void requestPercent(double percent) {
+        topRollerMotor.setControl(voltageRequest.withOutput(percent * 12));
+        bottomRollerMotor.setControl(voltageRequest.withOutput(percent * 12));
     }
     
     public Command setSubstateCmd(Substate substate) {
@@ -92,28 +93,28 @@ public class Intake extends SubsystemBase {
     public void periodic() {
         switch (substate) {
             case STOW:
-                setPosition(Position.STOW);
-                setPercent(0);
+                requestPosition(Position.STOW);
+                requestPercent(0);
                 break;
                 
             case OFF:
-                setPosition(Position.DEPLOY);
-                setPercent(0);
+                requestPosition(Position.DEPLOY);
+                requestPercent(0);
                 break;
                 
             case ON:
-                setPosition(Position.DEPLOY);
-                setPercent(1);
+                requestPosition(Position.DEPLOY);
+                requestPercent(1);
                 break;
 
             case RAMP:
-                setPosition(Position.RAMP);
-                setPercent(1);
+                requestPosition(Position.RAMP);
+                requestPercent(1);
                 break;
                 
             case UNJAM:
-                setPosition(Position.DEPLOY);
-                setPercent(-1);
+                requestPosition(Position.DEPLOY);
+                requestPercent(-1);
                 break;
         
             default:
