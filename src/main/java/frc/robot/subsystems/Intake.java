@@ -109,7 +109,7 @@ public class Intake extends SubsystemBase {
 
             case RAMP:
                 requestPosition(Position.RAMP);
-                requestPercent(1);
+                requestPercent(0.5);
                 break;
                 
             case UNJAM:

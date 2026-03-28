@@ -31,7 +31,7 @@ public class Constants {
     }
 
     public static class Drivetrain {
-        public static final double headingP = 10, headingI = 0, headingD = 0;
+        public static final double headingP = 5, headingI = 0, headingD = 0;
 
         private static final Slot0Configs steerGains = new Slot0Configs()
             .withKP(100).withKI(0).withKD(0.5)
@@ -181,7 +181,7 @@ public class Constants {
     }
 
     public static class Vision {
-        public static final String rightCamID = "limelight-right";
+        public static final String leftCamID = "limelight-left", rightCamID = "limelight-right";
     }
 
     public static class Shooter {
@@ -193,7 +193,7 @@ public class Constants {
         public static final Translation2d translationOffset = new Translation2d(-0.1905, -0.194945);
         public static final Rotation2d rotationOffset = Rotation2d.k180deg;
 
-        public static final double rpsToLinearVel = 0.3191858136;
+        public static final double rpsToLinearVel = 0.05;
     }
 
     public static class Transfer {

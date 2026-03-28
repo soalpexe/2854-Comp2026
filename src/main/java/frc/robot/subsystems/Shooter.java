@@ -53,7 +53,7 @@ public class Shooter extends SubsystemBase {
         hoodMotorConfig.MotorOutput.Inverted = InvertedValue.Clockwise_Positive;
         hoodMotorConfig.MotorOutput.NeutralMode = NeutralModeValue.Brake;
 
-        hoodMotorConfig.Slot0.kP = 20;
+        hoodMotorConfig.Slot0.kP = 10;
 
         leftFlywheelMotor.getConfigurator().apply(flywheelMotorConfig);
         rightFlywheelMotor.getConfigurator().apply(flywheelMotorConfig);
@@ -93,8 +93,8 @@ public class Shooter extends SubsystemBase {
     public void periodic() {
         switch (substate) {
             case IDLE:
-                requestAngle(Rotation2d.fromDegrees(20));
-                requestRPS(0); // TODO: Convert from raw voltage
+                requestAngle(Rotation2d.fromDegrees(22));
+                requestRPS(15);
                 break;
 
             case REV:
@@ -105,8 +105,8 @@ public class Shooter extends SubsystemBase {
                 break;
 
             case UNJAM:
-                requestAngle(Rotation2d.fromDegrees(20));
-                requestRPS(0); // TODO: Convert from raw voltage
+                requestAngle(Rotation2d.fromDegrees(22));
+                requestRPS(-50);
                 break;
         
             default:
