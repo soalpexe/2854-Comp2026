@@ -20,19 +20,21 @@ public class Constants {
     public static final int controllerID = 0;
     public static final double deadband = 0.1;
     
-    public static final double period = 0.02;
     public static final double odomFrequency = 250, odomPeriod = 1 / odomFrequency;
 
     public static class Field {
-        public static final Translation2d hubPose = new Translation2d(4.625, 4.03);
+        public static final Translation2d hubPosition = new Translation2d(4.625, 4.03);
         
-        public static final Translation2d feedLeftPose = new Translation2d(1.977, 6.1413);
-        public static final Translation2d feedRightPose = new Translation2d(1.977, 1.988);
+        public static final Translation2d feedLeftPosition = new Translation2d(1.977, 6.1413);
+        public static final Translation2d feedRightPosition = new Translation2d(1.977, 1.988);
     }
 
     public static class Drivetrain {
         public static final double headingP = 5, headingI = 0, headingD = 0;
 
+        public static final double minSnakeVel = 1;
+
+        // Tuner Constants
         private static final Slot0Configs steerGains = new Slot0Configs()
             .withKP(100).withKI(0).withKD(0.5)
             .withKS(0.1).withKV(2.66).withKA(0)
@@ -182,6 +184,8 @@ public class Constants {
 
     public static class Vision {
         public static final String leftCamID = "limelight-left", rightCamID = "limelight-right";
+
+        public static final double maxAmbiguity = 0.7;
     }
 
     public static class Shooter {
@@ -192,8 +196,6 @@ public class Constants {
 
         public static final Translation2d translationOffset = new Translation2d(-0.1905, -0.194945);
         public static final Rotation2d rotationOffset = Rotation2d.k180deg;
-
-        public static final double rpsToLinearVel = 0.05;
     }
 
     public static class Transfer {

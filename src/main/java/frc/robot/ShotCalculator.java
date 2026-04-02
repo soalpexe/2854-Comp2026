@@ -9,7 +9,6 @@ import java.util.function.Supplier;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
-import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.math.interpolation.InterpolatingDoubleTreeMap;
 import edu.wpi.first.wpilibj.Notifier;
 
@@ -36,42 +35,23 @@ public class ShotCalculator {
 
     private static void updateState() {
         Pose2d robotPose = robotPoseSupplier.get();
+        Translation2d hubPosition = Constants.Field.hubPosition;
+
         Translation2d rshooter = robotPose.getTranslation().plus(Constants.Shooter.translationOffset.rotateBy(robotPose.getRotation()));
 
-        if (robotPose.getX() > 4) {
-            if (robotPose.getY() > 4) rtarget = Constants.Field.feedLeftPose;
-            else rtarget = Constants.Field.feedRightPose;
+        if (robotPose.getX() > hubPosition.getX()) {
+            if (robotPose.getY() > hubPosition.getY()) rtarget = Constants.Field.feedLeftPosition;
+            else rtarget = Constants.Field.feedRightPosition;
         }
-        else rtarget = Constants.Field.hubPose;
+        else rtarget = hubPosition;
 
         Translation2d dr = rtarget.minus(rshooter);
         double distance = dr.getNorm();
 
-        ShotParameters rawParams = new ShotParameters(
+        targetParams = new ShotParameters(
             dr.getAngle(),
             Rotation2d.fromDegrees(hoodAngleLUT.get(distance)),
             rpsLUT.get(distance)
-        );
-
-        Translation2d vrproj = vrobotSupplier.get();
-        Translation3d vrobot = new Translation3d(vrproj.getX(), vrproj.getY(), 0);
-
-        double linearVel = rawParams.rps() * Constants.Shooter.rpsToLinearVel;
-        double headingRad = rawParams.heading().getRadians(), hoodAngleRad = rawParams.hoodAngle().getRadians();
-        
-        Translation3d vball = new Translation3d(
-            Math.cos(headingRad) * Math.cos(hoodAngleRad) * linearVel,
-            Math.sin(headingRad) * Math.cos(hoodAngleRad) * linearVel,
-            Math.sin(hoodAngleRad) * linearVel
-        );
-
-        Translation3d vshot = vball.minus(vrobot);
-        Translation2d vsproj = new Translation2d(vshot.getX(), vshot.getY());
-
-        targetParams = new ShotParameters(
-            vsproj.getAngle(),
-            Rotation2d.fromRadians(Math.atan2(vshot.getZ(), vsproj.getNorm())),
-            vshot.getNorm() / Constants.Shooter.rpsToLinearVel
         );
     }
 
@@ -81,11 +61,14 @@ public class ShotCalculator {
 
         hoodAngleLUT = new InterpolatingDoubleTreeMap();
         hoodAngleLUT.put(1.4, 22.0);
-        hoodAngleLUT.put(4.4, 37.0);
+        hoodAngleLUT.put(4.4, 35.0);
 
         rpsLUT = new InterpolatingDoubleTreeMap();
         rpsLUT.put(1.4, 40.0);
         rpsLUT.put(4.4, 50.0);
+
+        rtarget = new Translation2d();
+        targetParams = new ShotParameters(Rotation2d.kZero, Rotation2d.kZero, 0);
 
         notifier = new Notifier(ShotCalculator::updateState);
         notifier.startPeriodic(Constants.odomPeriod);

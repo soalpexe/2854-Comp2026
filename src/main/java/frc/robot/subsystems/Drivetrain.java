@@ -5,11 +5,11 @@
 package frc.robot.subsystems;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.function.DoubleSupplier;
 
 import org.json.simple.parser.ParseException;
 
-import com.ctre.phoenix6.Utils;
 import com.ctre.phoenix6.hardware.CANcoder;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.swerve.SwerveDrivetrain;
@@ -21,19 +21,19 @@ import com.pathplanner.lib.config.PIDConstants;
 import com.pathplanner.lib.config.RobotConfig;
 import com.pathplanner.lib.controllers.PPHolonomicDriveController;
 
+import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.wpilibj.DriverStation;
-import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.Subsystem;
 import frc.robot.Constants;
+import frc.robot.LimelightHelpers.PoseEstimate;
 import frc.robot.ShotCalculator;
-import frc.robot.Utilities;
 
 public class Drivetrain extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder> implements Subsystem {
     public enum Substate {
@@ -43,8 +43,6 @@ public class Drivetrain extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder> imp
     }
 
     private PIDController headingPID;
-
-    private Translation2d rlast, r;
     
     private Substate substate;
     private SwerveRequest.FieldCentric fcRequest;
@@ -55,9 +53,6 @@ public class Drivetrain extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder> imp
 
         headingPID = new PIDController(Constants.Drivetrain.headingP, Constants.Drivetrain.headingI, Constants.Drivetrain.headingD);
         headingPID.enableContinuousInput(-Math.PI, Math.PI);
-
-        rlast = new Translation2d();
-        r = new Translation2d();
 
         substate = Substate.DRIVE;
 
@@ -81,7 +76,7 @@ public class Drivetrain extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder> imp
                     new PIDConstants(5, 0, 0)
                 ),
                 RobotConfig.fromGUISettings(),
-                () -> Utilities.getAlliance() == Alliance.Red,
+                () -> false,
                 this
             );
         }
@@ -112,16 +107,14 @@ public class Drivetrain extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder> imp
     }
 
     public Translation2d getVelocity() {
-        Translation2d dr = r.minus(rlast);
-        return dr.div(Constants.period);
+        ChassisSpeeds fieldSpeeds = ChassisSpeeds.fromRobotRelativeSpeeds(getSpeeds(), getHeading());
+        return new Translation2d(fieldSpeeds.vxMetersPerSecond, fieldSpeeds.vyMetersPerSecond);
     }
 
-    public void addVisionMeasurements(Pose2d... rawEstimates) {
-        for (Pose2d rawEstimate : rawEstimates) {
-            if (Utilities.isValidPose(rawEstimate)) {
-                Pose2d estimate = new Pose2d(rawEstimate.getTranslation(), getHeading());
-                addVisionMeasurement(estimate, Utils.getCurrentTimeSeconds());
-            }
+    public void addVisionMeasurements(ArrayList<PoseEstimate> estimates) {
+        for (PoseEstimate estimate : estimates) {
+            Pose2d pose = new Pose2d(estimate.pose.getTranslation(), getHeading());
+            addVisionMeasurement(pose, estimate.timestampSeconds);
         }
     }
 
@@ -139,6 +132,7 @@ public class Drivetrain extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder> imp
 
     public void requestHeadingPID(Rotation2d targetHeading) {
         double omega = headingPID.calculate(getHeading().getRadians(), targetHeading.getRadians());
+        omega = MathUtil.clamp(omega, -Constants.Drivetrain.maxAngularSpeed, Constants.Drivetrain.maxAngularSpeed);
 
         fcRequest.withRotationalRate(omega);
         rcRequest.withRotationalRate(omega);
@@ -160,12 +154,9 @@ public class Drivetrain extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder> imp
 
     @Override
     public void periodic() {
-        rlast = r;
-        r = getDisplacement();
-
         switch (substate) {
             case SNAKE:
-                if (getVelocity().getNorm() > 1) requestHeadingPID(getVelocity().getAngle());
+                if (getVelocity().getNorm() > Constants.Drivetrain.minSnakeVel) requestHeadingPID(getVelocity().getAngle());
                 break;
 
             case AIM:

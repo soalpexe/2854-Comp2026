@@ -4,36 +4,49 @@
 
 package frc.robot.subsystems;
 
-import edu.wpi.first.math.geometry.Pose2d;
+import java.util.ArrayList;
+import java.util.Optional;
+
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
 import frc.robot.LimelightHelpers;
 import frc.robot.Utilities;
+import frc.robot.LimelightHelpers.PoseEstimate;
 import frc.robot.LimelightHelpers.RawFiducial;
 
 public class Vision extends SubsystemBase {
     public Vision() {}
 
-    public Pose2d getPoseEstimate(String cameraID) {
-        Pose2d estimate = Utilities.getAlliance() == Alliance.Red ?
-            LimelightHelpers.getBotPose2d_wpiRed(cameraID) :
-            LimelightHelpers.getBotPose2d_wpiBlue(cameraID);
-
+    public Optional<PoseEstimate> getPoseEstimate(String cameraID) {
         RawFiducial[] rawFiducials = LimelightHelpers.getRawFiducials(cameraID);
+        if (rawFiducials.length == 0) return Optional.empty();
 
         for (RawFiducial rawFiducial : rawFiducials) {
-            if (rawFiducial.ambiguity > 0.7) return null;
+            if (rawFiducial.ambiguity > Constants.Vision.maxAmbiguity) return Optional.empty();
         }
 
-        return estimate;
+        PoseEstimate estimate = Utilities.getAlliance() == Alliance.Red ?
+            LimelightHelpers.getBotPoseEstimate_wpiRed(cameraID) :
+            LimelightHelpers.getBotPoseEstimate_wpiBlue(cameraID);
+
+        return Optional.of(estimate);
     }
 
-    public Pose2d[] getPoseEstimates() {
-        return new Pose2d[] {
-            getPoseEstimate(Constants.Vision.leftCamID),
-            getPoseEstimate(Constants.Vision.rightCamID)
+    public ArrayList<PoseEstimate> getPoseEstimates() {
+        String[] camIDs = {
+            Constants.Vision.leftCamID,
+            Constants.Vision.rightCamID
         };
+
+        ArrayList<PoseEstimate> estimates = new ArrayList<>();
+
+        for (String camID : camIDs) {
+            Optional<PoseEstimate> estimate = getPoseEstimate(camID);
+            if (estimate.isPresent()) estimates.add(estimate.get());
+        }
+
+        return estimates;
     }
 
     @Override

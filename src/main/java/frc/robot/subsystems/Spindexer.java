@@ -28,15 +28,17 @@ public class Spindexer extends SubsystemBase {
     public Spindexer(int motorID) {
         motor = new TalonFX(motorID);
 
-        TalonFXConfiguration motorConfig = new TalonFXConfiguration();
-        motorConfig.MotorOutput.NeutralMode = NeutralModeValue.Brake;
-        motorConfig.CurrentLimits.StatorCurrentLimit = 40;
-        motorConfig.CurrentLimits.StatorCurrentLimitEnable = true;
-
-        motor.getConfigurator().apply(motorConfig);
-
         substate = Substate.OFF;
         voltageRequest = new VoltageOut(0);
+
+        configureMotors();
+    }
+
+    private void configureMotors() {
+        TalonFXConfiguration motorConfig = new TalonFXConfiguration();
+        motorConfig.MotorOutput.NeutralMode = NeutralModeValue.Brake;
+
+        motor.getConfigurator().apply(motorConfig);
     }
 
     public void requestPercent(double percent) {
