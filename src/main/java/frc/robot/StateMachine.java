@@ -20,6 +20,7 @@ public class StateMachine {
         INTAKE_AND_SNAKE,
         SHOOT,
         SHOOT_AND_INTAKE,
+        TRENCH,
         UNJAM
     }
 

@@ -27,6 +27,8 @@ public class Constants {
         
         public static final Translation2d feedLeftPosition = new Translation2d(1.977, 6.1413);
         public static final Translation2d feedRightPosition = new Translation2d(1.977, 1.988);
+
+        public static final double bumpLeftY = 6.78, bumpRightY = 1.25;
     }
 
     public static class Drivetrain {
@@ -54,11 +56,16 @@ public class Constants {
 
         private static final Current slipCurrent = Amps.of(120);
 
-        private static final TalonFXConfiguration driveInitialConfigs = new TalonFXConfiguration();
+        private static final TalonFXConfiguration driveInitialConfigs = new TalonFXConfiguration()
+            .withCurrentLimits(
+                new CurrentLimitsConfigs()
+                    .withSupplyCurrentLimit(Amps.of(70))
+                    .withSupplyCurrentLimitEnable(true)
+            );
         private static final TalonFXConfiguration steerInitialConfigs = new TalonFXConfiguration()
             .withCurrentLimits(
                 new CurrentLimitsConfigs()
-                    .withStatorCurrentLimit(Amps.of(80))
+                    .withStatorCurrentLimit(Amps.of(60))
                     .withStatorCurrentLimitEnable(true)
             );
 
@@ -83,7 +90,7 @@ public class Constants {
         private static final int pigeonId = 0;
 
         private static final MomentOfInertia steerInertia = KilogramSquareMeters.of(0.01);
-        private static final MomentOfInertia driveInertia = KilogramSquareMeters.of(0.01);
+        private static final MomentOfInertia driveInertia = KilogramSquareMeters.of(0.035);
 
         private static final Voltage steerFrictionVoltage = Volts.of(0.2);
         private static final Voltage driveFrictionVoltage = Volts.of(0.2);
@@ -120,42 +127,42 @@ public class Constants {
         private static final int frontLeftDriveMotorId = 8;
         private static final int frontLeftSteerMotorId = 7;
         private static final int frontLeftEncoderId = 13;
-        private static final Angle frontLeftEncoderOffset = Rotations.of(0.383544921875);
+        private static final Angle frontLeftEncoderOffset = Rotations.of(0.395263671875);
         private static final boolean frontLeftSteerMotorInverted = true;
         private static final boolean frontLeftEncoderInverted = false;
 
         private static final Distance frontLeftXPos = Inches.of(11.375);
-        private static final Distance frontLeftYPos = Inches.of(10.3);
+        private static final Distance frontLeftYPos = Inches.of(10.375);
 
         private static final int frontRightDriveMotorId = 3;
         private static final int frontRightSteerMotorId = 4;
         private static final int frontRightEncoderId = 53;
-        private static final Angle frontRightEncoderOffset = Rotations.of(-0.38330078125);
+        private static final Angle frontRightEncoderOffset = Rotations.of(-0.392333984375);
         private static final boolean frontRightSteerMotorInverted = true;
         private static final boolean frontRightEncoderInverted = false;
 
         private static final Distance frontRightXPos = Inches.of(11.375);
-        private static final Distance frontRightYPos = Inches.of(-10.3);
+        private static final Distance frontRightYPos = Inches.of(-10.375);
 
         private static final int backLeftDriveMotorId = 1;
         private static final int backLeftSteerMotorId = 2;
         private static final int backLeftEncoderId = 51;
-        private static final Angle backLeftEncoderOffset = Rotations.of(0.114013671875);
+        private static final Angle backLeftEncoderOffset = Rotations.of(0.11279296875);
         private static final boolean backLeftSteerMotorInverted = true;
         private static final boolean backLeftEncoderInverted = false;
 
         private static final Distance backLeftXPos = Inches.of(-11.375);
-        private static final Distance backLeftYPos = Inches.of(10.3);
+        private static final Distance backLeftYPos = Inches.of(10.375);
 
         private static final int backRightDriveMotorId = 5;
         private static final int backRightSteerMotorId = 6;
         private static final int backRightEncoderId = 54;
-        private static final Angle backRightEncoderOffset = Rotations.of(0.3076171875);
+        private static final Angle backRightEncoderOffset = Rotations.of(0.310302734375);
         private static final boolean backRightSteerMotorInverted = true;
         private static final boolean backRightEncoderInverted = false;
 
         private static final Distance backRightXPos = Inches.of(-11.375);
-        private static final Distance backRightYPos = Inches.of(-10.3);
+        private static final Distance backRightYPos = Inches.of(-10.375);
 
         public static final SwerveModuleConstants<TalonFXConfiguration, TalonFXConfiguration, CANcoderConfiguration> frontLeftConfig =
             constantCreator.createModuleConstants(

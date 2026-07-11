@@ -39,7 +39,8 @@ public class Drivetrain extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder> imp
     public enum Substate {
         DRIVE,
         SNAKE,
-        AIM
+        AIM,
+        TRENCH_AND_BUMP
     }
 
     private PIDController headingPID;
@@ -154,14 +155,22 @@ public class Drivetrain extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder> imp
 
     @Override
     public void periodic() {
+        Rotation2d targetHeading;
+
         switch (substate) {
             case SNAKE:
                 if (getVelocity().getNorm() > Constants.Drivetrain.minSnakeVel) requestHeadingPID(getVelocity().getAngle());
                 break;
 
             case AIM:
-                Rotation2d targetHeading = ShotCalculator.getTargetParams().heading();
+                targetHeading = ShotCalculator.getTargetParams().heading();
                 requestHeadingPID(targetHeading.plus(Constants.Shooter.rotationOffset));
+                break;
+
+            case TRENCH_AND_BUMP:
+                Pose2d pose = getEstimatedPose();
+                targetHeading = (pose.getY() < Constants.Field.bumpLeftY && pose.getY() > Constants.Field.bumpRightY) ? new Rotation2d(45) : Rotation2d.kZero;
+                requestHeadingPID(targetHeading);
                 break;
         
             default:

@@ -17,6 +17,7 @@ import frc.robot.subsystems.Shooter;
 import frc.robot.subsystems.Spindexer;
 import frc.robot.subsystems.Transfer;
 import frc.robot.subsystems.Vision;
+import frc.robot.subsystems.Drivetrain.Substate;
 
 public class RobotContainer {
     private StateMachine fsm;
@@ -154,6 +155,13 @@ public class RobotContainer {
         fsm.addTransition(State.SHOOT_AND_INTAKE, State.SHOOT, () -> intake.setSubstateCmd(Intake.Substate.RAMP));
 
         fsm.configureState(
+            State.TRENCH,
+            () -> drivetrain.setSubstateCmd(Substate.TRENCH_AND_BUMP),
+            Commands::none,
+            () -> drivetrain.setSubstateCmd(Substate.DRIVE)
+        );
+
+        fsm.configureState(
             State.UNJAM,
             () -> Commands.sequence(
                 shooter.setSubstateCmd(Shooter.Substate.UNJAM),
@@ -195,6 +203,10 @@ public class RobotContainer {
 
         controller.b()
             .onTrue(fsm.requestStateCmd(State.UNJAM))
+            .onFalse(fsm.requestStateCmd(State.IDLE));
+
+        controller.y()
+            .onTrue(fsm.requestStateCmd(State.TRENCH))
             .onFalse(fsm.requestStateCmd(State.IDLE));
 
         controller.leftBumper().or(controller.rightBumper())

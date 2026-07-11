@@ -93,7 +93,7 @@ public class Shooter extends SubsystemBase {
     public void periodic() {
         switch (substate) {
             case IDLE:
-                requestAngle(Rotation2d.fromDegrees(25));
+                requestAngle(Rotation2d.fromDegrees(22));
                 requestRPS(15);
                 break;
 
@@ -105,7 +105,7 @@ public class Shooter extends SubsystemBase {
                 break;
 
             case UNJAM:
-                requestAngle(Rotation2d.fromDegrees(25));
+                requestAngle(Rotation2d.fromDegrees(22));
                 requestRPS(-50);
                 break;
         
