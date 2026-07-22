@@ -153,6 +153,10 @@ public class Drivetrain extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder> imp
         return Commands.runOnce(() -> this.substate = substate);
     }
 
+    public Command stopCmd() {
+        return runOnce(() -> requestSpeeds(new ChassisSpeeds()));
+    }
+
     @Override
     public void periodic() {
         Rotation2d targetHeading;

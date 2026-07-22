@@ -60,12 +60,28 @@ public class Intake extends SubsystemBase {
         TalonFXConfiguration pivotMotorConfig = new TalonFXConfiguration();
         pivotMotorConfig.MotorOutput.Inverted = InvertedValue.Clockwise_Positive;
         pivotMotorConfig.MotorOutput.NeutralMode = NeutralModeValue.Brake;
-        
+
         pivotMotorConfig.Slot0.kP = 10;
         pivotMotorConfig.MotionMagic.MotionMagicCruiseVelocity = 200;
         pivotMotorConfig.MotionMagic.MotionMagicAcceleration = 100;
+        pivotMotorConfig.CurrentLimits
+            .withSupplyCurrentLimit(Constants.Intake.pivotSupplyCurrentLimit)
+            .withSupplyCurrentLimitEnable(true)
+            .withStatorCurrentLimit(Constants.Intake.pivotStatorCurrentLimit)
+            .withStatorCurrentLimitEnable(true);
 
         pivotMotor.getConfigurator().apply(pivotMotorConfig);
+
+        TalonFXConfiguration rollerMotorConfig = new TalonFXConfiguration();
+        rollerMotorConfig.MotorOutput.NeutralMode = NeutralModeValue.Coast;
+        rollerMotorConfig.CurrentLimits
+            .withSupplyCurrentLimit(Constants.Intake.rollerSupplyCurrentLimit)
+            .withSupplyCurrentLimitEnable(true)
+            .withStatorCurrentLimit(Constants.Intake.rollerStatorCurrentLimit)
+            .withStatorCurrentLimitEnable(true);
+
+        topRollerMotor.getConfigurator().apply(rollerMotorConfig);
+        bottomRollerMotor.getConfigurator().apply(rollerMotorConfig);
     }
 
     public double getPosition() {

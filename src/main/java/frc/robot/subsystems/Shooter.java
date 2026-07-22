@@ -48,12 +48,22 @@ public class Shooter extends SubsystemBase {
         TalonFXConfiguration flywheelMotorConfig = new TalonFXConfiguration();
         flywheelMotorConfig.Slot0.kS = 0.13;
         flywheelMotorConfig.Slot0.kV = 0.115;
+        flywheelMotorConfig.CurrentLimits
+            .withSupplyCurrentLimit(Constants.Shooter.flywheelSupplyCurrentLimit)
+            .withSupplyCurrentLimitEnable(true)
+            .withStatorCurrentLimit(Constants.Shooter.flywheelStatorCurrentLimit)
+            .withStatorCurrentLimitEnable(true);
 
         TalonFXConfiguration hoodMotorConfig = new TalonFXConfiguration();
         hoodMotorConfig.MotorOutput.Inverted = InvertedValue.Clockwise_Positive;
         hoodMotorConfig.MotorOutput.NeutralMode = NeutralModeValue.Brake;
 
         hoodMotorConfig.Slot0.kP = 20;
+        hoodMotorConfig.CurrentLimits
+            .withSupplyCurrentLimit(Constants.Shooter.hoodSupplyCurrentLimit)
+            .withSupplyCurrentLimitEnable(true)
+            .withStatorCurrentLimit(Constants.Shooter.hoodStatorCurrentLimit)
+            .withStatorCurrentLimitEnable(true);
 
         leftFlywheelMotor.getConfigurator().apply(flywheelMotorConfig);
         rightFlywheelMotor.getConfigurator().apply(flywheelMotorConfig);

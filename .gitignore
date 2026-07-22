@@ -185,3 +185,8 @@ compile_commands.json
 
 # Eclipse generated file for annotation processors
 .factorypath
+
+# WPILib sim GUI local state
+simgui-ds.json
+simgui-window.json
+networktables.json
