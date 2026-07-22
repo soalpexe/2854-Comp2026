@@ -8,10 +8,12 @@ import org.littletonrobotics.junction.LoggedRobot;
 import org.littletonrobotics.junction.Logger;
 import org.littletonrobotics.junction.networktables.NT4Publisher;
 
+import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 
 public class Robot extends LoggedRobot {
     private RobotContainer container;
+    private Command autonomousCommand;
 
     public Robot() {
         Logger.recordMetadata("ProjectName", "2854-Comp2026");
@@ -29,13 +31,18 @@ public class Robot extends LoggedRobot {
     }
 
     @Override
-    public void autonomousInit() {}
+    public void autonomousInit() {
+        autonomousCommand = container.getAutonomousCommand();
+        if (autonomousCommand != null) CommandScheduler.getInstance().schedule(autonomousCommand);
+    }
 
     @Override
     public void autonomousPeriodic() {}
 
     @Override
-    public void teleopInit() {}
+    public void teleopInit() {
+        if (autonomousCommand != null) autonomousCommand.cancel();
+    }
 
     @Override
     public void teleopPeriodic() {}

@@ -12,6 +12,7 @@ import com.ctre.phoenix6.signals.NeutralModeValue;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import frc.robot.Constants;
 
 public class Spindexer extends SubsystemBase {
     public enum Substate {
@@ -37,6 +38,11 @@ public class Spindexer extends SubsystemBase {
     private void configureMotors() {
         TalonFXConfiguration motorConfig = new TalonFXConfiguration();
         motorConfig.MotorOutput.NeutralMode = NeutralModeValue.Brake;
+        motorConfig.CurrentLimits
+            .withSupplyCurrentLimit(Constants.Spindexer.supplyCurrentLimit)
+            .withSupplyCurrentLimitEnable(true)
+            .withStatorCurrentLimit(Constants.Spindexer.statorCurrentLimit)
+            .withStatorCurrentLimitEnable(true);
 
         motor.getConfigurator().apply(motorConfig);
     }

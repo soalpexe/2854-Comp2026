@@ -198,6 +198,9 @@ public class Constants {
     public static class Shooter {
         public static final int leftFlywheelMotorID = 12, rightFlywheelMotorID = 13, hoodMotorID = 15;
 
+        public static final double flywheelSupplyCurrentLimit = 60, flywheelStatorCurrentLimit = 80;
+        public static final double hoodSupplyCurrentLimit = 30, hoodStatorCurrentLimit = 40;
+
         public static final double motorToHoodRatio = 34;
         public static final Rotation2d minHardstopAngle = Rotation2d.fromDegrees(18);
 
@@ -207,16 +210,23 @@ public class Constants {
 
     public static class Transfer {
         public static final int motorID = 14;
+
+        public static final double supplyCurrentLimit = 30, statorCurrentLimit = 40;
     }
-    
+
     public static class Spindexer {
         public static final int motorID = 11;
+
+        public static final double supplyCurrentLimit = 30, statorCurrentLimit = 40;
     }
 
     public static class Intake {
         public static final int pivotMotorID = 9, topRollerMotorID = 16, bottomRollerMotorID = 10;
 
         public static final double tolerance = 0.2;
+
+        public static final double pivotSupplyCurrentLimit = 40, pivotStatorCurrentLimit = 60;
+        public static final double rollerSupplyCurrentLimit = 30, rollerStatorCurrentLimit = 50;
     }
     
     public static class Climber {

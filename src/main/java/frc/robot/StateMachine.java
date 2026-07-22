@@ -122,4 +122,9 @@ public class StateMachine {
             Commands.runOnce(() -> requestedState = state)
         );
     }
+
+    // requestStateCmd returns before the state is reached; use this to wait until it's active and settled
+    public Command waitForState(State state) {
+        return Commands.waitUntil(() -> activeState == state && activeState == requestedState);
+    }
 }

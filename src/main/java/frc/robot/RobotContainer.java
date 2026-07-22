@@ -8,9 +8,13 @@ import java.util.Set;
 
 import org.littletonrobotics.junction.Logger;
 
+import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import frc.robot.StateMachine.State;
+import frc.robot.auto.AutoRoutines;
 import frc.robot.subsystems.Drivetrain;
 import frc.robot.subsystems.Intake;
 import frc.robot.subsystems.Shooter;
@@ -30,6 +34,9 @@ public class RobotContainer {
     private Transfer transfer;
     private Spindexer spindexer;
     private Intake intake;
+
+    private AutoRoutines autoRoutines;
+    private SendableChooser<Command> autoChooser;
 
     public RobotContainer() {
         fsm = new StateMachine();
@@ -54,6 +61,14 @@ public class RobotContainer {
 
         configureFSM();
         configureBindings();
+
+        autoRoutines = new AutoRoutines(fsm, drivetrain);
+        autoChooser = autoRoutines.buildAutoChooser();
+        SmartDashboard.putData("Auto Chooser", autoChooser);
+    }
+
+    public Command getAutonomousCommand() {
+        return autoChooser.getSelected();
     }
 
     private void configureFSM() {
